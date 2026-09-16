@@ -77,3 +77,45 @@ directly.
 
 - Create or switch to a separate development or feature branch before making changes.
 - try not to push directly to `master`;
+
+---
+
+## Getting started (hackathon build)
+
+```bash
+npm install
+npm run dev        # http://localhost:3000
+```
+
+Demo accounts (also listed on the login screen):
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Administrator | `admin@parinaam.gov.in` | `admin123` |
+| Supervisor | `supervisor@parinaam.gov.in` | `supervisor123` |
+| Investigating Officer | `io@parinaam.gov.in` | `io123` |
+| Judiciary | `judiciary@parinaam.gov.in` | `judiciary123` |
+
+## Architecture notes
+
+- **Data seam** — all data flows through `src/lib/store.ts` (mirrors the REST
+  surface of the `parinaam` backend) and is served by `src/app/api/*` route
+  handlers. Swapping in the real backend means replacing the store internals /
+  pointing the handlers at the API base URL; pages, components and types
+  (`src/lib/types.ts`, which mirrors the backend record contract) stay as-is.
+- **Auth seam** — `src/lib/auth.ts` (HMAC cookie sessions) + `src/middleware.ts`
+  are isolated so Supabase Auth + TOTP MFA slots in without touching pages.
+  `src/lib/roles.ts` holds the shared role definitions used by client code.
+- **Read-only guarantee** — the only write paths for record data are
+  `POST /api/cases/[id]/status` (status + panchnamaRef, supervisors/admins) and
+  the admin account endpoints. Hashes, classification, kit, GPS and image data
+  are never editable from the UI.
+- **Exports** — server-side only, so downloads are byte-identical regardless of
+  client: court-ready PDF (`@react-pdf/renderer`), DOCX (`docx`), XLSX
+  (`exceljs`), CSV. Single case via `?caseId=`, filtered sets via the same
+  filter params as `/api/cases`.
+- **Map & charts** — MapLibre GL via `react-map-gl` (no API key, demo tiles) and
+  Recharts, client-side only (`src/components/map-wrapper.tsx`).
+- **SIMS** — `src/components/sims-placeholder.tsx` is the designated surface for
+  the future NCB SIMS sync; no redesign needed when the real integration lands.
+
