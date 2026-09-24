@@ -36,8 +36,8 @@ export function TrendChart({ data }: { data: DailyPoint[] }) {
       <AreaChart data={data} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
         <defs>
           <linearGradient id="totalFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1e3a8a" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.02} />
+            <stop offset="0%" stopColor="#0d355e" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="#0d355e" stopOpacity={0.02} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -48,7 +48,7 @@ export function TrendChart({ data }: { data: DailyPoint[] }) {
         <Area type="monotone" dataKey="positive" stackId="1" stroke={OUTCOME_COLORS.positive} fill={OUTCOME_COLORS.positive} fillOpacity={0.55} name="Positive" />
         <Area type="monotone" dataKey="inconclusive" stackId="1" stroke={OUTCOME_COLORS.inconclusive} fill={OUTCOME_COLORS.inconclusive} fillOpacity={0.55} name="Inconclusive" />
         <Area type="monotone" dataKey="negative" stackId="1" stroke={OUTCOME_COLORS.negative} fill={OUTCOME_COLORS.negative} fillOpacity={0.55} name="Negative" />
-        <Area type="monotone" dataKey="total" stroke="#1e3a8a" strokeWidth={2} fill="url(#totalFill)" name="All cases" fillOpacity={0} />
+        <Area type="monotone" dataKey="total" stroke="#0d355e" strokeWidth={2} fill="url(#totalFill)" name="All cases" fillOpacity={0} />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -79,7 +79,7 @@ export function DistrictBar({ data }: { data: { district: string; cases: number;
         <YAxis type="category" dataKey="district" width={110} fontSize={11} tickLine={false} axisLine={false} />
         <Tooltip />
         <Legend wrapperStyle={{ fontSize: 11 }} />
-        <Bar dataKey="cases" name="All cases" fill="#1e3a8a" radius={[0, 4, 4, 0]} barSize={12} />
+        <Bar dataKey="cases" name="All cases" fill="#0d355e" radius={[0, 4, 4, 0]} barSize={12} />
         <Bar dataKey="positive" name="Positive" fill="#dc2626" radius={[0, 4, 4, 0]} barSize={12} />
       </BarChart>
     </ResponsiveContainer>

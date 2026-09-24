@@ -11,16 +11,18 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 import {
   ROLE_LABELS,
+  can,
   canManageAccounts,
   canReview,
+  type Capability,
   type Role,
   type SessionUser,
 } from "./roles";
 
 // Re-exported for server-side consumers; client components must import
 // from "@/lib/roles" directly (this file imports node/next server APIs).
-export { ROLE_LABELS, canManageAccounts, canReview };
-export type { Role, SessionUser };
+export { ROLE_LABELS, can, canManageAccounts, canReview };
+export type { Capability, Role, SessionUser };
 
 export const SESSION_COOKIE = "parinaam_session";
 

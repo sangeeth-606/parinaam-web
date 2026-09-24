@@ -2,13 +2,13 @@ import { renderToBuffer } from "@react-pdf/renderer";
 
 import { casesForExport, exportFilename } from "@/lib/export/common";
 import { CourtPdf } from "@/lib/export/court-pdf";
-import { getSession } from "@/lib/session";
 import { recordExport } from "@/lib/store";
 
 export async function GET(request: Request) {
-  const session = await getSession();
   const { searchParams, origin } = new URL(request.url);
-  const { cases, caseId } = casesForExport(searchParams);
+  const gate = await casesForExport(searchParams);
+  if (!gate.ok) return gate.response;
+  const { cases, caseId, session } = gate;
 
   if (cases.length !== 1) {
     return new Response(
@@ -36,18 +36,16 @@ export async function GET(request: Request) {
     <CourtPdf
       record={record}
       imageDataUri={imageDataUri}
-      generatedBy={session?.name ?? "unknown"}
+      generatedBy={session.name}
       certificateLine={`NDPS Field Drug Test Certificate — ${record.id}`}
     />
   );
 
-  if (session) {
-    recordExport(
-      session.name,
-      `Exported ${record.id} as court-ready PDF`,
-      record.id
-    );
-  }
+  recordExport(
+    session.name,
+    `Exported ${record.id} as court-ready PDF`,
+    record.id
+  );
 
   return new Response(new Uint8Array(buffer), {
     headers: {

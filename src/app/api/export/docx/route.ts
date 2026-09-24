@@ -1,22 +1,20 @@
 import { casesForExport, exportFilename } from "@/lib/export/common";
 import { renderDocx } from "@/lib/export/docx";
-import { getSession } from "@/lib/session";
 import { recordExport } from "@/lib/store";
 
 export async function GET(request: Request) {
-  const session = await getSession();
   const { searchParams } = new URL(request.url);
-  const { cases, caseId } = casesForExport(searchParams);
+  const gate = await casesForExport(searchParams);
+  if (!gate.ok) return gate.response;
+  const { cases, caseId, session } = gate;
 
   if (cases.length === 0) {
     return new Response("No matching cases.", { status: 404 });
   }
 
-  const buffer = await renderDocx(cases, session?.name ?? "unknown");
+  const buffer = await renderDocx(cases, session.name);
 
-  if (session) {
-    recordExport(session.name, `Exported ${cases.length} case(s) as DOCX`, caseId);
-  }
+  recordExport(session.name, `Exported ${cases.length} case(s) as DOCX`, caseId);
 
   return new Response(new Uint8Array(buffer), {
     headers: {

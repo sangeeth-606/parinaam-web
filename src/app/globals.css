@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7f9;
+  /* NCB (ncb.gov.in) palette */
+  --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -9,14 +10,21 @@
   --muted-foreground: #64748b;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --primary: #1e3a8a; /* institutional deep indigo */
-  --primary-foreground: #f8fafc;
-  --accent: #eef2ff;
-  --accent-foreground: #1e3a8a;
-  --destructive: #b91c1c;
+  --primary: #0d355e; /* NCB masthead navy */
+  --primary-foreground: #ffffff;
+  --accent: #fff0d1; /* soft gold hover tint (blend of #ffcf66 on white) */
+  --accent-foreground: #0b213f;
+  --destructive: #dc3545;
   --destructive-foreground: #fef2f2;
-  --ring: #1e3a8a;
-  --radius: 0.5rem;
+  --ring: #0d355e;
+  --radius: 0.375rem;
+
+  /* Brand primitives (also usable outside Tailwind utilities) */
+  --navy: #0d355e;
+  --navy-deep: #062544;
+  --navy-mid: #122945;
+  --gold: #ffcf66;
+  --gold-deep: #d0a74f;
 }
 
 @theme inline {
@@ -35,19 +43,37 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-ring: var(--ring);
+  --color-navy: var(--navy);
+  --color-navy-deep: var(--navy-deep);
+  --color-navy-mid: var(--navy-mid);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-poppins);
   --font-mono: var(--font-geist-mono);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-}
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 
-* {
-  border-color: var(--border);
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--navy);
+  }
+
+  ::selection {
+    background: var(--gold);
+    color: var(--navy-deep);
+  }
 }
 

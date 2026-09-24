@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getSession } from "@/lib/session";
 import { queryCases } from "@/lib/store";
 import type { CaseQuery } from "@/lib/types";
 
@@ -23,8 +24,13 @@ function parseCaseQuery(searchParams: URLSearchParams): CaseQuery {
 }
 
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
   const q = parseCaseQuery(request.nextUrl.searchParams);
-  const result = queryCases(q);
+  // RBAC: scope applied here — field officers only ever list their own records.
+  const result = queryCases(q, session);
   if (q.dir === "asc") result.items = [...result.items].reverse();
   return NextResponse.json(result);
 }

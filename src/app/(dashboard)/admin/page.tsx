@@ -18,7 +18,7 @@ import { formatDateTime } from "@/lib/utils";
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  pending: "bg-amber-50 text-amber-800 border-amber-200",
+  pending: "bg-gold/30 text-[#7a5e0f] border-gold-deep/60",
   suspended: "bg-red-50 text-red-800 border-red-200",
 };
 
@@ -63,7 +63,7 @@ export default async function AdminPage() {
             <CardTitle>
               Recent logins &amp; audit trail
               {pendingCount > 0 && (
-                <Badge className="ml-2 border-amber-200 bg-amber-50 text-amber-800">
+                <Badge className="ml-2 border-gold-deep/60 bg-gold/30 text-[#7a5e0f]">
                   {pendingCount} pending approval
                 </Badge>
               )}

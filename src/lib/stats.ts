@@ -1,7 +1,11 @@
 // Aggregations over the case corpus, shared by the dashboard home and the
 // analytics page. In production these become backend aggregation endpoints.
+//
+// RBAC: pass the session as `viewer` so roles without `records.view_unit`
+// (field officers) only aggregate their own records.
 
 import { allCases } from "./store";
+import type { SessionUser } from "./roles";
 import type { CaseStatus, ClassificationOutcome, EnrichedCase } from "./types";
 import type { DailyPoint } from "@/components/charts";
 
@@ -16,8 +20,8 @@ export interface Stats {
   mapPoints: { id: string; lat: number; lon: number; outcome: string }[];
 }
 
-export function computeStats(): Stats {
-  const cases = allCases();
+export function computeStats(viewer?: SessionUser): Stats {
+  const cases = allCases(viewer);
 
   const byStatus: Record<CaseStatus, number> = {
     reported: 0,

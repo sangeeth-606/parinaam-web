@@ -5,7 +5,8 @@ import { getSession } from "@/lib/session";
 import { getCase, recordStatusChange, updateCase } from "@/lib/store";
 import { CASE_STATUSES, type CaseStatus } from "@/lib/types";
 
-// The ONLY write path for case metadata: reviewers change caseStatus (and set
+// The ONLY write path for case metadata: reviewers with
+// `records.change_status` (admin + supervisor) change caseStatus (and set
 // panchnamaRef) through this action. Record data itself is immutable here —
 // the backend owns the truth.
 export async function POST(
@@ -33,7 +34,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid status." }, { status: 400 });
   }
 
-  const before = getCase(id);
+  const before = getCase(id, session);
   if (!before) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }
