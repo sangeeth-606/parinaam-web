@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { Sidebar, Topbar } from "@/components/app-shell";
+import { Footer, Sidebar, Topbar, TricolorStrip } from "@/components/app-shell";
 import { getSession } from "@/lib/session";
 
 export default async function DashboardLayout({
@@ -14,12 +14,14 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar user={session} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar user={session} />
-        <main className="flex-1 p-6">{children}</main>
+    <div className="flex min-h-screen flex-col">
+      <TricolorStrip />
+      <Topbar user={session} />
+      <div className="flex flex-1">
+        <Sidebar user={session} />
+        <main className="min-w-0 flex-1 p-6">{children}</main>
       </div>
+      <Footer />
     </div>
   );
 }

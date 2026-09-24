@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
 import { computeStats } from "@/lib/stats";
 import { recentActivity } from "@/lib/store";
-import { canManageAccounts, type Role } from "@/lib/auth";
+import { can, canManageAccounts, type Role } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 
 const ACTIVITY_ICONS = {
@@ -25,13 +25,19 @@ const ACTIVITY_ICONS = {
   account_created: UserPlus,
   account_approved: UserCheck,
   export: FileUp,
+  integrity: ShieldCheck,
 } as const;
 
 export default async function DashboardHome() {
   const session = (await getSession())!;
-  const stats = computeStats();
-  const activity = recentActivity(8);
+  // RBAC: stats are scope-derived — field officers aggregate their own records.
+  const stats = computeStats(session);
   const isAdmin = canManageAccounts(session.role as Role);
+  // RBAC: `audit.view` — the activity feed is an audit surface; field
+  // officers (and anyone without the capability) don't see it.
+  const canViewActivity = can(session.role as Role, "audit.view");
+  const activity = canViewActivity ? recentActivity(8) : [];
+  const canSeeAnalytics = can(session.role as Role, "records.view_unit");
 
   const cards = [
     { label: "Total cases", value: String(stats.total), sub: "all time" },
@@ -72,9 +78,9 @@ export default async function DashboardHome() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className={`gap-6 ${canViewActivity ? "grid lg:grid-cols-3" : ""}`}>
         {/* Trend */}
-        <Card className="lg:col-span-2">
+        <Card className={canViewActivity ? "lg:col-span-2" : ""}>
           <CardHeader>
             <CardTitle>Submissions — last 14 days</CardTitle>
           </CardHeader>
@@ -83,30 +89,32 @@ export default async function DashboardHome() {
           </CardContent>
         </Card>
 
-        {/* Recent activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent activity</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {activity.map((event) => {
-              const Icon = ACTIVITY_ICONS[event.kind];
-              return (
-                <div key={event.id} className="flex items-start gap-3">
-                  <div className="mt-0.5 rounded-full bg-muted p-1.5">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        {/* Recent activity — RBAC: audit.view only */}
+        {canViewActivity && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent activity</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {activity.map((event) => {
+                const Icon = ACTIVITY_ICONS[event.kind];
+                return (
+                  <div key={event.id} className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full bg-muted p-1.5">
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs">
+                        <span className="font-medium">{event.actor}</span> — {event.detail}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">{formatDateTime(event.at)}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs">
-                      <span className="font-medium">{event.actor}</span> — {event.detail}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">{formatDateTime(event.at)}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -118,7 +126,7 @@ export default async function DashboardHome() {
           <CardContent className="space-y-4">
             <SimsPlaceholder />
             {stats.mockedGps > 0 && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              <div className="flex items-start gap-2 rounded-lg border border-gold-deep/50 bg-gold/15 p-3 text-xs text-navy-deep">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>
                   {stats.mockedGps} record(s) report mocked GPS coordinates — verify device
@@ -144,15 +152,25 @@ export default async function DashboardHome() {
               </span>
               <span className="text-xs text-muted-foreground">search, filter, export</span>
             </Link>
-            <Link
-              href="/analytics"
-              className="flex items-center justify-between rounded-lg border p-3 text-sm transition-colors hover:bg-accent"
-            >
-              <span className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" /> Regional analytics
-              </span>
-              <span className="text-xs text-muted-foreground">map + trends</span>
-            </Link>
+            {canSeeAnalytics ? (
+              <Link
+                href="/analytics"
+                className="flex items-center justify-between rounded-lg border p-3 text-sm transition-colors hover:bg-accent"
+              >
+                <span className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Regional analytics
+                </span>
+                <span className="text-xs text-muted-foreground">map + trends</span>
+              </Link>
+            ) : (
+              <div className="flex items-start gap-2 rounded-lg border border-gold-deep/50 bg-gold/15 p-3 text-xs text-navy-deep">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Regional analytics are restricted to unit-wide roles — your
+                  dashboard figures cover your own submissions only.
+                </span>
+              </div>
+            )}
             {isAdmin && (
               <Link
                 href="/admin"

@@ -26,6 +26,15 @@ function mulberry32(seed: number) {
 const sha = (input: string) =>
   createHash("sha256").update(input).digest("hex");
 
+/**
+ * Canonical record-hash derivation. Kept next to the generator so the
+ * "recompute integrity" action (RBAC: records.recompute_integrity) always
+ * agrees with what was sealed at ingest. Backend owns this in production.
+ */
+export function deriveRecordHash(id: string): string {
+  return sha(`record:${id}`);
+}
+
 export interface MockUser {
   id: string;
   name: string;
@@ -158,7 +167,7 @@ export function generateCases(): EnrichedCase[] {
         deltaE: Number(deltaE.toFixed(2)),
         qualityFlags,
       },
-      recordHash: sha(`record:${id}`),
+      recordHash: deriveRecordHash(id),
       signature: sha(`sig:${id}:${i}`),
       caseStatus: weighted(rnd, STATUS_WEIGHTS),
     };
@@ -181,7 +190,7 @@ export function generateCases(): EnrichedCase[] {
 const DEMO_USERS: MockUser[] = [
   { id: "u-001", name: "Admin Control", email: "admin@parinaam.gov.in", role: "admin", department: "NCB — Zonal Unit", status: "active", createdAt: "2026-07-01T09:00:00.000Z", password: "admin123" },
   { id: "u-002", name: "Supervisor Sharma", email: "supervisor@parinaam.gov.in", role: "supervisor", department: "Excise Department", status: "active", createdAt: "2026-07-02T09:00:00.000Z", password: "supervisor123" },
-  { id: "u-003", name: "IO Verma", email: "io@parinaam.gov.in", role: "io", department: "Police Department", status: "active", createdAt: "2026-07-03T09:00:00.000Z", password: "io123" },
+  { id: "u-003", name: "A. Sharma", email: "io@parinaam.gov.in", role: "io", department: "Police Department", status: "active", createdAt: "2026-07-03T09:00:00.000Z", password: "io123" },
   { id: "u-004", name: "Magistrate Rao", email: "judiciary@parinaam.gov.in", role: "judiciary", department: "District Court", status: "active", createdAt: "2026-07-04T09:00:00.000Z", password: "judiciary123" },
   { id: "u-005", name: "Officer Nair", email: "nair@parinaam.gov.in", role: "io", department: "Customs (Preventive)", status: "pending", createdAt: "2026-09-10T09:00:00.000Z", password: "nair123" },
   { id: "u-006", name: "Judge Iyer", email: "iyer@parinaam.gov.in", role: "judiciary", department: "Sessions Court", status: "pending", createdAt: "2026-09-12T09:00:00.000Z", password: "iyer123" },

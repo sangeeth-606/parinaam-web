@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const statusStyles: Record<CaseStatus, string> = {
   reported: "bg-slate-100 text-slate-700 border-slate-200",
-  under_review: "bg-amber-50 text-amber-800 border-amber-200",
+  under_review: "bg-gold/30 text-[#7a5e0f] border-gold-deep/60",
   reviewed: "bg-emerald-50 text-emerald-800 border-emerald-200",
   escalated: "bg-red-50 text-red-800 border-red-200",
 };

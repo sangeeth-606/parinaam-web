@@ -1,5 +1,4 @@
 import { casesForExport, exportFilename } from "@/lib/export/common";
-import { getSession } from "@/lib/session";
 import { recordExport } from "@/lib/store";
 
 function csvCell(value: unknown): string {
@@ -8,9 +7,15 @@ function csvCell(value: unknown): string {
 }
 
 export async function GET(request: Request) {
-  const session = await getSession();
   const { searchParams } = new URL(request.url);
-  const { cases, caseId } = casesForExport(searchParams);
+  const gate = await casesForExport(searchParams);
+  if (!gate.ok) return gate.response;
+  const { cases, caseId, session } = gate;
+
+  if (cases.length === 0) {
+    // Missing, foreign (scoped-out) and non-matching ids are indistinguishable.
+    return new Response("No matching cases.", { status: 404 });
+  }
 
   const header = [
     "case_id",
@@ -75,9 +80,7 @@ export async function GET(request: Request) {
     );
   }
 
-  if (session) {
-    recordExport(session.name, `Exported ${cases.length} case(s) as CSV`, caseId);
-  }
+  recordExport(session.name, `Exported ${cases.length} case(s) as CSV`, caseId);
 
   return new Response(lines.join("\n"), {
     headers: {

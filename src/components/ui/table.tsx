@@ -39,7 +39,7 @@ function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTableCell
   return (
     <th
       className={cn(
-        "h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground",
+        "h-10 bg-navy px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-white",
         className
       )}
       {...props}

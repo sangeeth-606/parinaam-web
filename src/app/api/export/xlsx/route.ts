@@ -2,7 +2,6 @@ import ExcelJS from "exceljs";
 
 import { casesForExport, exportFilename } from "@/lib/export/common";
 import { recordExport } from "@/lib/store";
-import { getSession } from "@/lib/session";
 
 const HEADERS = [
   "Case ID",
@@ -33,9 +32,15 @@ const HEADERS = [
 ];
 
 export async function GET(request: Request) {
-  const session = await getSession();
   const { searchParams } = new URL(request.url);
-  const { cases, caseId } = casesForExport(searchParams);
+  const gate = await casesForExport(searchParams);
+  if (!gate.ok) return gate.response;
+  const { cases, caseId, session } = gate;
+
+  if (cases.length === 0) {
+    // Missing, foreign (scoped-out) and non-matching ids are indistinguishable.
+    return new Response("No matching cases.", { status: 404 });
+  }
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Parinaam Web Dashboard";
@@ -83,13 +88,11 @@ export async function GET(request: Request) {
   );
 
   const buffer = await workbook.xlsx.writeBuffer();
-  if (session) {
-    recordExport(
-      session.name,
-      `Exported ${cases.length} case(s) as XLSX`,
-      caseId
-    );
-  }
+  recordExport(
+    session.name,
+    `Exported ${cases.length} case(s) as XLSX`,
+    caseId
+  );
 
   return new Response(buffer as ArrayBuffer, {
     headers: {

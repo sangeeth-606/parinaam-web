@@ -1,18 +1,57 @@
 // Shared export helpers: turn a URLSearchParams filter into the matching case
 // set (used by every export route), and provide a common filename builder.
+//
+// RBAC: this is the single gate for all four export formats —
+//   * 401 when there is no valid session,
+//   * 403 when the role lacks `records.export_court`,
+//   * record scope applied via queryCases(viewer), so field officers can
+//     only ever export their own records (missing/foreign ids and empty
+//     filtered sets are indistinguishable — no existence probing).
 
+import { NextResponse } from "next/server";
+
+import { can, type SessionUser } from "@/lib/roles";
+import { getSession } from "@/lib/session";
 import { queryCases } from "@/lib/store";
 import type { CaseQuery, EnrichedCase } from "@/lib/types";
 
 const EXPORT_CAP = 5000;
 
-export function casesForExport(searchParams: URLSearchParams): {
-  cases: EnrichedCase[];
-  caseId?: string;
-} {
+export type CasesForExport =
+  | { ok: true; session: SessionUser; cases: EnrichedCase[]; caseId?: string }
+  | { ok: false; response: NextResponse };
+
+export async function casesForExport(
+  searchParams: URLSearchParams
+): Promise<CasesForExport> {
+  const session = await getSession();
+  if (!session) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Not authenticated." },
+        { status: 401 }
+      ),
+    };
+  }
+  if (!can(session.role, "records.export_court")) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Your role cannot export court bundles." },
+        { status: 403 }
+      ),
+    };
+  }
+
   const caseId = searchParams.get("caseId") ?? undefined;
   if (caseId) {
-    return { caseId, cases: queryCases({ search: caseId, pageSize: 1 }).items };
+    return {
+      ok: true,
+      session,
+      caseId,
+      cases: queryCases({ search: caseId, pageSize: 1 }, session).items,
+    };
   }
 
   const q: CaseQuery = {
@@ -29,7 +68,7 @@ export function casesForExport(searchParams: URLSearchParams): {
     page: 1,
     pageSize: EXPORT_CAP,
   };
-  return { cases: queryCases(q).items };
+  return { ok: true, session, cases: queryCases(q, session).items };
 }
 
 export function exportFilename(ext: string, caseId?: string): string {

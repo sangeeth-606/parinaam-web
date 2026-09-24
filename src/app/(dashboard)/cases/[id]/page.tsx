@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StatusActions } from "@/components/cases/status-actions";
+import { IntegrityActions } from "@/components/cases/integrity-actions";
 import { MapWrapper } from "@/components/map-wrapper";
 import { SimsPlaceholder } from "@/components/sims-placeholder";
 import { OutcomeBadge, StatusBadge } from "@/components/ui/badge";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
 import { getCase } from "@/lib/store";
-import type { Role } from "@/lib/auth";
+import { can, type Role } from "@/lib/auth";
 import { formatConfidence, formatDateTime } from "@/lib/utils";
 
 function Row({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
@@ -30,10 +31,15 @@ export default async function CaseDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const record = getCase(id);
+  const session = (await getSession())!;
+  // RBAC: scope-filtered lookup — a field officer opening a foreign record
+  // gets the same 404 as a typo'd id (no existence probing).
+  const record = getCase(id, session);
   if (!record) notFound();
 
-  const session = (await getSession())!;
+  const role = session.role as Role;
+  const mayChangeStatus = can(role, "records.change_status");
+  const mayRecompute = can(role, "records.recompute_integrity");
 
   return (
     <div className="space-y-5">
@@ -202,30 +208,58 @@ export default async function CaseDetailPage({
             <CardHeader>
               <CardTitle>Integrity / provenance</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <Row label="Record hash" value={record.recordHash} mono />
               <Row label="Signature" value={record.signature} mono />
-              <p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">
-                Record data is immutable on this dashboard — hashes and the signature are owned
-                by the backend. Reviewers may only change the case status and panchnama
-                reference below.
+              <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
+                Record data is immutable on this dashboard — hashes and the
+                signature are owned by the backend. Every recompute below is
+                recorded in the audit trail.
               </p>
+              {mayRecompute && <IntegrityActions caseId={record.id} />}
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Review state</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StatusActions
-                caseId={record.id}
-                currentStatus={record.caseStatus}
-                currentPanchnamaRef={record.panchnamaRef}
-                role={session.role as Role}
-              />
-            </CardContent>
-          </Card>
+          {/* RBAC: records.change_status — reviewers only; others never see the form. */}
+          {mayChangeStatus ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Review state</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StatusActions
+                  caseId={record.id}
+                  currentStatus={record.caseStatus}
+                  currentPanchnamaRef={record.panchnamaRef}
+                  role={role}
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Review state</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center justify-between">
+                  <span>Status</span>
+                  <StatusBadge status={record.caseStatus} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Panchnama reference</span>
+                  <span className="font-mono text-xs">
+                    {record.panchnamaRef ?? "—"}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Read-only: your role cannot change case review state. Only
+                  supervisors and administrators hold the{" "}
+                  <span className="font-mono">records.change_status</span>{" "}
+                  capability.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardContent className="pt-5">

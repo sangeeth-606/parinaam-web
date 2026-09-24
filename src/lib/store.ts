@@ -6,7 +6,8 @@
 // Cached on globalThis so dev hot-reloads keep one dataset.
 // ---------------------------------------------------------------------------
 
-import { generateCases, generateUsers, type MockUser } from "./mock-data";
+import { deriveRecordHash, generateCases, generateUsers, type MockUser } from "./mock-data";
+import { can, ownsRecord, type SessionUser } from "./roles";
 import type {
   CaseQuery,
   CaseStatus,
@@ -18,7 +19,13 @@ export interface AuditEvent {
   id: string;
   at: string;
   actor: string;
-  kind: "login" | "account_created" | "account_approved" | "status_change" | "export";
+  kind:
+    | "login"
+    | "account_created"
+    | "account_approved"
+    | "status_change"
+    | "export"
+    | "integrity";
   detail: string;
   caseId?: string;
 }
@@ -52,7 +59,7 @@ function seedAudit(): AuditEvent[] {
     mk(1, "Magistrate Rao", "login", "Signed in from 10.4.2.17", 12),
     mk(2, "Supervisor Sharma", "status_change", "Set NDPS-101142 → under_review", 48, "NDPS-101142"),
     mk(3, "Admin Control", "account_created", "Created account for Officer Nair (io)", 130),
-    mk(4, "IO Verma", "login", "Signed in from 10.4.9.62", 190),
+    mk(4, "A. Sharma", "login", "Signed in from 10.4.9.62", 190),
     mk(5, "Supervisor Sharma", "status_change", "Set NDPS-100977 → reviewed", 260, "NDPS-100977"),
     mk(6, "Admin Control", "account_approved", "Approved judiciary account for Judge Iyer", 400),
     mk(7, "Magistrate Rao", "export", "Exported NDPS-100864 as PDF (court copy)", 520, "NDPS-100864"),
@@ -104,9 +111,24 @@ function matches(record: EnrichedCase, q: CaseQuery): boolean {
   return true;
 }
 
-export function queryCases(q: CaseQuery): Paginated<EnrichedCase> {
-  const store = getStore();
-  const filtered = store.cases.filter((c) => matches(c, q));
+/**
+ * Corpus visible to a viewer — the single choke point for record scope.
+ * Roles without `records.view_unit` (field officers) see only records they
+ * operate; everyone else sees the unit-wide corpus. Every accessor below
+ * routes through this, so list/search/facets/detail/exports/stats are all
+ * scoped by construction.
+ */
+function visibleCases(viewer?: SessionUser): EnrichedCase[] {
+  const all = getStore().cases;
+  if (!viewer || can(viewer.role, "records.view_unit")) return all;
+  return all.filter((c) => ownsRecord(viewer, c));
+}
+
+export function queryCases(
+  q: CaseQuery,
+  viewer?: SessionUser
+): Paginated<EnrichedCase> {
+  const filtered = visibleCases(viewer).filter((c) => matches(c, q));
   const page = Math.max(1, q.page ?? 1);
   const pageSize = Math.min(200, Math.max(1, q.pageSize ?? 25));
   const start = (page - 1) * pageSize;
@@ -118,8 +140,10 @@ export function queryCases(q: CaseQuery): Paginated<EnrichedCase> {
   };
 }
 
-export function getCase(id: string): EnrichedCase | undefined {
-  return getStore().cases.find((c) => c.id === id);
+/** Returns undefined for missing records AND out-of-scope records alike,
+ *  so scoped roles can't probe record existence with 403 vs 404. */
+export function getCase(id: string, viewer?: SessionUser): EnrichedCase | undefined {
+  return visibleCases(viewer).find((c) => c.id === id);
 }
 
 export function updateCase(
@@ -133,18 +157,40 @@ export function updateCase(
   return record;
 }
 
-export function distinctFacets() {
-  const store = getStore();
+export function distinctFacets(viewer?: SessionUser) {
+  const cases = visibleCases(viewer);
   return {
-    districts: [...new Set(store.cases.map((c) => c.district))].sort(),
-    departments: [...new Set(store.cases.map((c) => c.department))].sort(),
-    officers: [...new Set(store.cases.map((c) => c.operatorName))].sort(),
-    kitTypes: [...new Set(store.cases.map((c) => c.kit.kitType))].sort(),
+    districts: [...new Set(cases.map((c) => c.district))].sort(),
+    departments: [...new Set(cases.map((c) => c.department))].sort(),
+    officers: [...new Set(cases.map((c) => c.operatorName))].sort(),
+    kitTypes: [...new Set(cases.map((c) => c.kit.kitType))].sort(),
   };
 }
 
-export function allCases(): EnrichedCase[] {
-  return getStore().cases;
+export function allCases(viewer?: SessionUser): EnrichedCase[] {
+  return visibleCases(viewer);
+}
+
+/**
+ * RBAC: records.recompute_integrity — re-derive the sealed record hash and
+ * compare. `viewer` still scopes lookup, so field officers can only
+ * recompute their own records.
+ */
+export function verifyIntegrity(
+  id: string,
+  viewer: SessionUser
+):
+  | { record: EnrichedCase; stored: string; recomputed: string; ok: boolean }
+  | undefined {
+  const record = getCase(id, viewer);
+  if (!record) return undefined;
+  const recomputed = deriveRecordHash(id);
+  return {
+    record,
+    stored: record.recordHash,
+    recomputed,
+    ok: recomputed === record.recordHash,
+  };
 }
 
 // --- accounts --------------------------------------------------------------
@@ -242,6 +288,24 @@ export function recordExport(actor: string, detail: string, caseId?: string): vo
     actor,
     kind: "export",
     detail,
+    caseId,
+  });
+}
+
+/** RBAC: records.recompute_integrity — every recompute attempt is audited. */
+export function recordIntegrity(
+  actor: string,
+  caseId: string,
+  ok: boolean
+): void {
+  getStore().audit.unshift({
+    id: `evt-${crypto.randomUUID()}`,
+    at: new Date().toISOString(),
+    actor,
+    kind: "integrity",
+    detail: `Recomputed integrity for ${caseId} — ${
+      ok ? "hash verified" : "MISMATCH"
+    }`,
     caseId,
   });
 }
