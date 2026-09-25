@@ -66,8 +66,8 @@ export default async function AnalyticsPage() {
           <CardContent>
             <MapWrapper points={stats.mapPoints} center={MAP_CENTER} zoom={5} height={420} />
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Red = positive · Green = negative · Amber = inconclusive. Tiles: MapLibre demo
-              (no API key). In production, swap the style for a MeitY/OSM vector basemap.
+              Red = positive · Green = negative · Amber = inconclusive. Basemap: Esri
+              World Street Map with OpenStreetMap data (no API key required).
             </p>
           </CardContent>
         </Card>
