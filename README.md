@@ -1,93 +1,47 @@
-# Parinaam - Web Dashboard
+# Parinaam Web Dashboard
 
-Parinaam is a project for digitizing NDPS field drug-test results — officers use a
-mobile app (separate repo: `parinaam`, which also has the backend) to capture and
-submit test records. This repo is the **web dashboard** — the frontend where
-supervisors, investigating officers, judiciary, and admins log in to review, search,
-and export those records.
+Parinaam is an NCB-themed web dashboard for reviewing NDPS field drug-test records. It provides role-based access for administrators, supervisors, investigating officers, and judiciary users.
 
-This repo talks to the backend API (living in the `parinaam` repo) — it doesn't do any
-of the mobile capture/classification stuff itself, just displays and manages what's
-already been submitted.
-
-## What needs to be built
-
-**Login & accounts**
-- Login page (Admin / Supervisor / Judiciary / other reviewer roles — different roles
-  see different things)
-- Admin screen to add/approve new accounts (e.g. onboarding a new officer or judiciary
-  viewer)
-- Somewhere to see recent login activity / who got added when
-
-**Dashboard home page**
-- Quick overview when you log in — recent activity (new approvals, recent logins),
-  some summary numbers (total cases, pending, reviewed, etc.)
-
-**Case log page**
-- List/table of all submitted test cases
-- Filters: date, location/region, department, officer, kit type/batch, outcome, status
-- Search
-
-**Case detail page**
-- Click into a case, see everything: image, classification result, confidence score,
-  kit details, location, timestamp, officer, hash/signature info — all of this is
-  read-only, nothing here should ever be editable
-- Show the case's current status (reported / under review / reviewed / escalated —
-  whatever makes sense) and let a reviewer change *that* (not the actual record data)
-
-**Exports**
-- Export a case (or filtered set of cases) as PDF / DOCX / XLSX
-- PDF should be the "court-ready" version — image, hash, certificate info, map
-  location, all in one doc
-
-**Charts / analytics**
-- Some kind of map or chart showing which regions have more cases
-- A trend chart over time (cases, outcomes, whatever's useful)
-
-**SIMS integration**
-- Just leave a placeholder/space for this — real NCB SIMS integration isn't happening
-  for the hackathon, just make sure there's an obvious spot for it later without
-  needing to redesign everything
-
-## Data shape (what a "case record" looks like, coming from the backend)
-
-Just so the frontend knows what it's rendering — records will look roughly like this:
-
-id, createdAt, operatorId, deviceId
-kit: { name, model, batchNo, expiry, kitType }
-gps: { lat, lon, accuracy, mocked }
-imageUrl, imageHash
-classification: { outcome, confidence, deltaE, qualityFlags }
-recordHash, signature
-caseStatus: "reported" | "under_review" | "reviewed" | "escalated"
-panchnamaRef (optional)
+> **Current build status:** this repository is a self-contained hackathon/demo application. It uses an in-memory mock store and demo authentication; it is not yet connected to the production backend or Supabase.
 
 
-Everything except `caseStatus` and `panchnamaRef` should be treated as read-only on
-this end — the backend owns the truth for those, this app just displays it and lets
-reviewers change status/add references through proper actions, not by editing fields
-directly.
+Open [https://parinaam-web-v1-0.vercel.app](https://parinaam-web-v1-0.vercel.app) for v1.
 
-## Not this repo's job
+## Features
 
-- Anything about the mobile app (capture, camera, on-device classification)
-- Actually building the SIMS connection (just leave room for it)
+- Dashboard overview with case, status, outcome, and activity summaries
+- Searchable and filterable case log
+- Read-only case details with kit, GPS, image, classification, and integrity data
+- Review workflow for changing case status and adding a panchnama reference
+- Server-side RBAC and record-scope enforcement
+- PDF, DOCX, XLSX, and CSV exports
+- Analytics charts and an interactive MapLibre map using key-free Esri raster tiles
+- Administrator-only user management screen
+- SIMS integration placeholder for a future backend integration
 
-## Git wkflw
+## Tech stack
 
-- Create or switch to a separate development or feature branch before making changes.
-- try not to push directly to `master`;
+- Next.js 15 App Router and React 19
+- TypeScript
+- Tailwind CSS 4
+- MapLibre GL / `react-map-gl`
+- Recharts
+- TanStack React Table
+- `@react-pdf/renderer`, `docx`, and `exceljs`
 
----
+## Requirements
 
-## Getting started (hackathon build)
+- Node.js 20 or newer
+- npm
+
+## Local development
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+npm run dev
 ```
 
-Demo accounts (also listed on the login screen):
+### Demo accounts
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -96,26 +50,42 @@ Demo accounts (also listed on the login screen):
 | Investigating Officer | `io@parinaam.gov.in` | `io123` |
 | Judiciary | `judiciary@parinaam.gov.in` | `judiciary123` |
 
-## Architecture notes
+These credentials are for local demonstration only. Do not use them in a real government deployment.
 
-- **Data seam** — all data flows through `src/lib/store.ts` (mirrors the REST
-  surface of the `parinaam` backend) and is served by `src/app/api/*` route
-  handlers. Swapping in the real backend means replacing the store internals /
-  pointing the handlers at the API base URL; pages, components and types
-  (`src/lib/types.ts`, which mirrors the backend record contract) stay as-is.
-- **Auth seam** — `src/lib/auth.ts` (HMAC cookie sessions) + `src/middleware.ts`
-  are isolated so Supabase Auth + TOTP MFA slots in without touching pages.
-  `src/lib/roles.ts` holds the shared role definitions used by client code.
-- **Read-only guarantee** — the only write paths for record data are
-  `POST /api/cases/[id]/status` (status + panchnamaRef, supervisors/admins) and
-  the admin account endpoints. Hashes, classification, kit, GPS and image data
-  are never editable from the UI.
-- **Exports** — server-side only, so downloads are byte-identical regardless of
-  client: court-ready PDF (`@react-pdf/renderer`), DOCX (`docx`), XLSX
-  (`exceljs`), CSV. Single case via `?caseId=`, filtered sets via the same
-  filter params as `/api/cases`.
-- **Map & charts** — MapLibre GL via `react-map-gl` (no API key, demo tiles) and
-  Recharts, client-side only (`src/components/map-wrapper.tsx`).
-- **SIMS** — `src/components/sims-placeholder.tsx` is the designated surface for
-  the future NCB SIMS sync; no redesign needed when the real integration lands.
+## Roles and access
+
+| Role | Record scope | Main permissions |
+| --- | --- | --- |
+| Administrator | All records | Manage users, review cases, change status, export, recompute integrity, view audit data |
+| Supervisor | Unit records | Review cases, change status, export, recompute integrity, view audit data |
+| Investigating Officer | Own records | View, export, and recompute integrity for owned records |
+| Judiciary | Unit records | View, export, and view audit data |
+
+Sealed record content is immutable. The dashboard only permits authorized changes to case status and the panchnama reference; it does not permit editing hashes, images, GPS, kit data, or classification results.
+
+## Main pages
+
+- `/` — dashboard summary
+- `/cases` — searchable case log
+- `/cases/[id]` — read-only case details and review actions
+- `/analytics` — charts and geographic map; restricted by role
+- `/admin` — account management; administrator-only
+- `/login` — demo sign-in
+
+## API surface
+
+The app includes route handlers under `src/app/api` for:
+
+- authentication (`login`, `logout`)
+- cases (`GET`, `POST`, detail operations)
+- case status and integrity actions
+- facets and mock image data
+- PDF, DOCX, XLSX, and CSV exports
+- administrator user management
+
+## Production limitations and next steps
+
+- Replace the public Esri tile endpoint with an approved, contracted, or self-hosted basemap provider for production traffic.
+- Implement the NCB SIMS integration and complete the remaining lab workflows.
+- Add integration, authorization, accessibility, and end-to-end tests before production use.
 
