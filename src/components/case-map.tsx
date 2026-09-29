@@ -3,9 +3,18 @@
 // Capture-pin map — MapLibre GL via react-map-gl with Esri World Street Map tiles.
 // Dynamically imported (client-only) from pages that need it.
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { AttributionControl, Marker, NavigationControl, Map } from "react-map-gl/maplibre";
+import {
+  AttributionControl,
+  Layer,
+  NavigationControl,
+  Popup,
+  Source,
+  Map,
+  type MapLayerMouseEvent,
+  type MapRef,
+} from "react-map-gl/maplibre";
 
 /**
  * Esri's public World Street Map MapServer exposes raster tiles without an
@@ -36,11 +45,20 @@ const ESRI_WORLD_STREET_STYLE = {
   ],
 };
 
-const OUTCOME_COLORS: Record<string, string> = {
-  positive: "#dc2626",
-  negative: "#059669",
-  inconclusive: "#d97706",
-};
+
+/** Human label for a trilevel outcome, used in pin tooltips. */
+function labelFor(outcome: string): string {
+  switch (outcome?.toUpperCase?.() ?? "") {
+    case "CONSISTENT_WITH_REAGENT_POSITIVE":
+      return "Consistent with reagent positive (presumptive)";
+    case "CONSISTENT_WITH_REAGENT_NEGATIVE":
+      return "Consistent with reagent negative (presumptive)";
+    case "INCONCLUSIVE":
+      return "Inconclusive";
+    default:
+      return "Unrecognised outcome";
+  }
+}
 
 export interface MapPoint {
   id: string;
@@ -48,6 +66,8 @@ export interface MapPoint {
   lon: number;
   outcome: string;
   positive?: boolean;
+  /** Optional grouping key (district / station) for clustering. */
+  cluster?: string;
 }
 
 export function CaseMap({
@@ -63,16 +83,88 @@ export function CaseMap({
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<{
+    lng: number;
+    lat: number;
+    text: string;
+  } | null>(null);
+  const mapRef = useRef<MapRef>(null);
+
+  // GeoJSON feature collection, clustered by district on the map itself so
+  // overlapping pins in a metro region aggregate instead of hiding each other.
+  const geojson = useMemo(
+    () => ({
+      type: "FeatureCollection" as const,
+      features: points.map((p) => ({
+        type: "Feature" as const,
+        geometry: { type: "Point" as const, coordinates: [p.lon, p.lat] },
+        properties: {
+          id: p.id,
+          outcome: p.outcome,
+          district: p.cluster ?? "",
+          label: labelFor(p.outcome),
+        },
+      })),
+    }),
+    [points]
+  );
+
+  // Clicking a cluster zooms into its members; clicking a single pin opens a
+  // detail popup. Both read straight from the clustered source's features.
+  const handleMapClick = (event: MapLayerMouseEvent) => {
+    const feature = event.features?.[0];
+    if (!feature) {
+      setSelected(null);
+      return;
+    }
+    const geometry = feature.geometry;
+    if (geometry.type !== "Point") return;
+    const [lng, lat] = geometry.coordinates;
+    const props = feature.properties as {
+      cluster?: boolean;
+      point_count?: number;
+      cluster_id?: number;
+      id?: string;
+      label?: string;
+      district?: string;
+    };
+
+    if (props?.cluster && typeof props.cluster_id === "number") {
+      const source = mapRef.current?.getSource("case-pins") as
+        | {
+            getClusterExpansionZoom: (
+              id: number,
+              cb: (err: unknown, zoom: number) => void
+            ) => void;
+          }
+        | undefined;
+      source?.getClusterExpansionZoom(props.cluster_id, (err, zoom) => {
+        if (!err && typeof zoom === "number") {
+          mapRef.current?.easeTo({ center: [lng, lat], zoom });
+        }
+      });
+      setSelected(null);
+      return;
+    }
+
+    setSelected({
+      lng,
+      lat,
+      text: `${props?.id ?? "Record"} — ${props?.label ?? "outcome"}`,
+    });
+  };
 
   return (
     <div className="relative overflow-hidden rounded-lg bg-muted" style={{ height }}>
       <Map
+        ref={mapRef}
         initialViewState={{ longitude: center[1], latitude: center[0], zoom }}
         style={{ width: "100%", height: "100%" }}
         mapStyle={ESRI_WORLD_STREET_STYLE}
         attributionControl={false}
         reuseMaps
         onLoad={() => setIsLoading(false)}
+        onClick={handleMapClick}
         onError={(event) => {
           setIsLoading(false);
           setMapError(event.error?.message || "The basemap could not be loaded.");
@@ -80,15 +172,87 @@ export function CaseMap({
       >
         <NavigationControl position="top-right" />
         <AttributionControl position="bottom-right" compact />
-        {points.map((p) => (
-          <Marker key={p.id} longitude={p.lon} latitude={p.lat} anchor="bottom">
-            <span
-              title={`${p.id} — ${p.outcome}`}
-              className="block h-3 w-3 rounded-full border-2 border-white shadow"
-              style={{ backgroundColor: OUTCOME_COLORS[p.outcome] ?? "#64748b" }}
+
+        {points.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-muted-foreground">
+            No capture positions available. Records without a GPS fix are
+            deliberately not plotted — an approximate coordinate would be false
+            evidence.
+          </div>
+        ) : (
+          <Source
+            id="case-pins"
+            type="geojson"
+            data={geojson}
+            cluster
+            clusterMaxZoom={11}
+            clusterRadius={48}
+          >
+            {/* Cluster bubbles — neutral navy, sized by member count. */}
+            <Layer
+              id="clusters"
+              type="circle"
+              filter={["has", "point_count"]}
+              paint={{
+                "circle-color": "#0d355e",
+                "circle-radius": ["step", ["get", "point_count"], 16, 5, 21, 12, 27],
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff",
+              }}
             />
-          </Marker>
-        ))}
+            <Layer
+              id="cluster-count"
+              type="symbol"
+              filter={["has", "point_count"]}
+              layout={{
+                "text-field": ["get", "point_count_abbreviated"],
+                "text-size": 12,
+              }}
+              paint={{ "text-color": "#ffffff" }}
+            />
+            {/* Unclustered pins, coloured by trilevel reagent outcome. */}
+            <Layer
+              id="unclustered-point"
+              type="circle"
+              filter={["!", ["has", "point_count"]]}
+              paint={{
+                "circle-color": [
+                  "match",
+                  ["get", "outcome"],
+                  "CONSISTENT_WITH_REAGENT_POSITIVE",
+                  "#dc2626",
+                  "CONSISTENT_WITH_REAGENT_NEGATIVE",
+                  "#059669",
+                  "INCONCLUSIVE",
+                  "#d97706",
+                  "#64748b",
+                ],
+                "circle-radius": 7,
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff",
+              }}
+            />
+          </Source>
+        )}
+
+        {selected && (
+          <Popup
+            longitude={selected.lng}
+            latitude={selected.lat}
+            onClose={() => setSelected(null)}
+            closeButton={false}
+            closeOnClick={false}
+            offset={12}
+          >
+            <div className="max-w-[220px] text-xs">
+              <p className="font-semibold">{selected.text}</p>
+              <p className="mt-1 text-[11px] text-slate-600">
+                Presumptive indicator only — confirmatory laboratory analysis is
+                required under Rule 10(2) NDPS Rules, 2022.
+              </p>
+            </div>
+          </Popup>
+        )}
       </Map>
 
       {isLoading && (

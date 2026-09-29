@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { canManageAccounts } from "@/lib/roles";
 import { getSession } from "@/lib/session";
-import { createUser, listUsers, toPublicUser } from "@/lib/store";
+import { createUser, listUsers } from "@/lib/store";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -18,7 +18,8 @@ async function requireAdmin() {
 export async function GET() {
   const guard = await requireAdmin();
   if (guard.error) return guard.error;
-  return NextResponse.json(listUsers().map(toPublicUser));
+  // listUsers() already returns the public projection.
+  return NextResponse.json(await listUsers());
 }
 
 export async function POST(request: Request) {
@@ -39,12 +40,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const user = createUser({
+  const user = await createUser({
     name: body.name,
     email: body.email,
     role: body.role,
     department: body.department,
     actor: guard.session!.name,
   });
-  return NextResponse.json(toPublicUser(user), { status: 201 });
+  return NextResponse.json(user, { status: 201 });
 }

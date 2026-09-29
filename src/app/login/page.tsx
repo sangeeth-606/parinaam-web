@@ -9,18 +9,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input, Label } from "@/components/ui/input";
 
 const DEMO_ACCOUNTS = [
-  { email: "admin@parinaam.gov.in", password: "admin123", role: "Administrator" },
-  { email: "supervisor@parinaam.gov.in", password: "supervisor123", role: "Supervisor" },
-  { email: "io@parinaam.gov.in", password: "io123", role: "Investigating Officer" },
-  { email: "judiciary@parinaam.gov.in", password: "judiciary123", role: "Judiciary" },
+  { email: "admin", password: "Parinaam#2026", role: "Administrator" },
+  { email: "supervisor", password: "Parinaam#2026", role: "Supervisor" },
+  { email: "sharma", password: "Parinaam#2026", role: "Senior Officer" },
+  { email: "reddy", password: "Parinaam#2026", role: "Judiciary" },
+  { email: "gill", password: "Parinaam#2026", role: "Field Officer" },
 ];
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/";
-  const [email, setEmail] = useState("admin@parinaam.gov.in");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("admin");
+  const [password, setPassword] = useState("Parinaam#2026");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -60,11 +61,12 @@ function LoginForm() {
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <Label htmlFor="email">Official email</Label>
+            <Label htmlFor="email">Username or Official Email</Label>
             <Input
               id="email"
-              type="email"
+              type="text"
               autoComplete="username"
+              placeholder="e.g. admin or admin@parinaam.gov.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1"

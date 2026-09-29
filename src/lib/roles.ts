@@ -1,27 +1,8 @@
 // Shared, environment-agnostic role + capability definitions.
-// Kept free of server-only imports (next/headers, node:crypto) so client
-// components can use them; lib/auth.ts re-exports for server code.
-//
-// RBAC capability matrix (web app). Mobile/device-only rows from the spec
-// ("Create a test record", "Build and seal a lot") are owned by the field
-// app and intentionally not modelled here.
-//
-//   Capability                 admin  supervisor  io (field)  judiciary
-//   records.view_own             ✓       ✓           ✓          ✓
-//   records.view_unit            ✓       ✓           —          ✓
-//   records.change_status        ✓       ✓           —          —
-//   records.export_court         ✓       ✓        own only      ✓
-//   records.recompute_integrity  ✓       ✓        own only      —
-//   records.edit_sealed        never   never       never       never
-//   lab.enter_results            ✓       —           —          —   (no UI yet)
-//   admin.users                  ✓       —           —          —
-//   audit.view                   ✓       ✓           —          ✓
-//
-// "Search and filter the log — own only" and "Export — own" are enforced by
-// the record SCOPE (recordScope/ownsRecord below) applied in lib/store,
-// not as separate capabilities.
+// Unified with parinaam-app src/contracts/officer-roles.ts
+// Kept free of server-only imports so client components can use them.
 
-export type Role = "admin" | "supervisor" | "io" | "judiciary";
+export type Role = "admin" | "supervisor" | "senior" | "junior" | "judiciary" | "io";
 
 export interface SessionUser {
   id: string;
@@ -29,6 +10,8 @@ export interface SessionUser {
   email: string;
   role: Role;
   department: string;
+  badgeNumber?: string;
+  officerCode?: string;
 }
 
 export type Capability =
@@ -62,11 +45,21 @@ export const ROLE_CAPABILITIES: Record<Role, readonly Capability[]> = {
     "records.recompute_integrity",
     "audit.view",
   ],
-  // Investigating / field officer — exactly the spec table.
-  io: [
+  senior: [
     "records.view_own",
+    "records.view_unit",
     "records.export_court",
     "records.recompute_integrity",
+  ],
+  io: [
+    "records.view_own",
+    "records.view_unit",
+    "records.export_court",
+    "records.recompute_integrity",
+  ],
+  junior: [
+    "records.view_own",
+    "records.export_court",
   ],
   judiciary: [
     "records.view_own",
@@ -76,41 +69,52 @@ export const ROLE_CAPABILITIES: Record<Role, readonly Capability[]> = {
   ],
 };
 
-export function can(role: Role, capability: Capability): boolean {
-  return ROLE_CAPABILITIES[role].includes(capability);
+export function normalizeRole(role: string): Role {
+  const lower = (role || "").toLowerCase().trim();
+  if (lower === "admin") return "admin";
+  if (lower === "supervisor") return "supervisor";
+  if (lower === "senior" || lower === "io") return "senior";
+  if (lower === "junior") return "junior";
+  if (lower === "judiciary") return "judiciary";
+  return "junior";
+}
+
+export function can(role: string, capability: Capability): boolean {
+  const norm = normalizeRole(role);
+  return ROLE_CAPABILITIES[norm]?.includes(capability) ?? false;
 }
 
 /** Visibility breadth for a role: unit-wide, or own records only. */
 export type RecordScope = "own" | "unit";
 
-export function recordScope(role: Role): RecordScope {
+export function recordScope(role: string): RecordScope {
   return can(role, "records.view_unit") ? "unit" : "own";
 }
 
-/**
- * A record is "own" when the session user is the recorded operator.
- * Production binds this to operatorId/user.id; the mock corpus links
- * accounts to field officers by display name.
- */
 export function ownsRecord(
   user: SessionUser,
-  record: { operatorName: string }
+  record: { operatorName: string; operatorId?: string }
 ): boolean {
-  return record.operatorName === user.name;
+  if (record.operatorId && user.officerCode && record.operatorId === user.officerCode) {
+    return true;
+  }
+  return record.operatorName.toLowerCase() === user.name.toLowerCase();
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrator",
   supervisor: "Supervisor",
+  senior: "Senior Investigating Officer",
   io: "Investigating Officer",
-  judiciary: "Judiciary",
+  junior: "Junior Field Officer",
+  judiciary: "Judiciary / Court Reviewer",
 };
 
 /** Only admins manage accounts; supervisors + admins can change case status. */
-export function canReview(role: Role): boolean {
+export function canReview(role: string): boolean {
   return can(role, "records.change_status");
 }
 
-export function canManageAccounts(role: Role): boolean {
+export function canManageAccounts(role: string): boolean {
   return can(role, "admin.users");
 }

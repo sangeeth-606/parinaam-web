@@ -1,12 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Edge-safe auth gate: middleware only checks that a session cookie exists.
-// Full HMAC verification + role checks happen in layouts/route handlers
-// (node runtime) via `parseSession()` — see src/lib/auth.ts.
-// HACKATHON NOTE: swap this for Supabase's @supabase/ssr session refresh
-// when wiring real auth.
+// Only the login screen and the auth endpoints are reachable without a session.
+// Everything else — including /api/blobs/* evidence photos — requires a cookie.
+// NOTE: this is a presence check only; full HMAC verification and role checks
+// happen in layouts/route handlers (node runtime) via `parseSession()`.
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/api/mock-image"];
+const PUBLIC_PATHS = ["/login", "/api/auth"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

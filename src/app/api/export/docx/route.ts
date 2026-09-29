@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
   const buffer = await renderDocx(cases, session.name);
 
-  recordExport(session.name, `Exported ${cases.length} case(s) as DOCX`, caseId);
+  await recordExport(session.name, "docx", caseId);
 
   return new Response(new Uint8Array(buffer), {
     headers: {

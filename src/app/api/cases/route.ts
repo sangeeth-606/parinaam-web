@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
   const q = parseCaseQuery(request.nextUrl.searchParams);
   // RBAC: scope applied here — field officers only ever list their own records.
-  const result = queryCases(q, session);
+  const result = await queryCases(q, session);
   if (q.dir === "asc") result.items = [...result.items].reverse();
   return NextResponse.json(result);
 }

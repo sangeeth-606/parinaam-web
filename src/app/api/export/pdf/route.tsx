@@ -18,18 +18,22 @@ export async function GET(request: Request) {
   }
   const record = cases[0];
 
-  // Embed the field photo (same-origin object URL) as a data URI.
+  // Embed the genuine field photo (same-origin object URL) as a data URI.
+  // If the record has no evidence image, the certificate is still issued and
+  // the photo box renders empty — we never substitute a synthetic image.
   let imageDataUri: string | undefined;
-  try {
-    const imageResponse = await fetch(`${origin}${record.imageUrl}`, {
-      cache: "no-store",
-    });
-    if (imageResponse.ok) {
-      const buf = Buffer.from(await imageResponse.arrayBuffer());
-      imageDataUri = `data:image/png;base64,${buf.toString("base64")}`;
+  if (record.imageUrl) {
+    try {
+      const imageResponse = await fetch(`${origin}${record.imageUrl}`, {
+        cache: "no-store",
+      });
+      if (imageResponse.ok && imageResponse.headers.get("content-type")?.startsWith("image/")) {
+        const buf = Buffer.from(await imageResponse.arrayBuffer());
+        imageDataUri = `data:${imageResponse.headers.get("content-type")};base64,${buf.toString("base64")}`;
+      }
+    } catch {
+      // image optional in export
     }
-  } catch {
-    // image optional in export
   }
 
   const buffer = await renderToBuffer(
@@ -41,11 +45,7 @@ export async function GET(request: Request) {
     />
   );
 
-  recordExport(
-    session.name,
-    `Exported ${record.id} as court-ready PDF`,
-    record.id
-  );
+  await recordExport(session.name, "pdf", record.id);
 
   return new Response(new Uint8Array(buffer), {
     headers: {

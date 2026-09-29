@@ -13,7 +13,7 @@ export async function GET(
   }
   const { id } = await params;
   // RBAC: scoped lookup — a foreign record 404s exactly like a missing one.
-  const record = getCase(id, session);
+  const record = await getCase(id, session);
   if (!record) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }

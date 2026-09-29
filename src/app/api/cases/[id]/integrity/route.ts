@@ -26,18 +26,21 @@ export async function POST(
   }
 
   const { id } = await params;
-  const result = verifyIntegrity(id, session);
+  const result = await verifyIntegrity(id, session);
   if (!result) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }
 
-  recordIntegrity(session.name, id, result.ok);
+  await recordIntegrity(session.name, id, result.ok);
 
   return NextResponse.json({
     caseId: id,
     ok: result.ok,
+    reason: result.reason,
     stored: result.stored,
     recomputed: result.recomputed,
+    chainStored: result.chainStored,
+    chainRecomputed: result.chainRecomputed,
   });
 }
 

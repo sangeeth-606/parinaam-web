@@ -100,23 +100,49 @@ export function buildCaseDoc(cases: EnrichedCase[], generatedBy: string): Docume
         width: { size: 100, type: WidthType.PERCENTAGE },
         borders: NO_BORDER,
         rows: [
-          kvRow("Outcome", c.classification.outcome.toUpperCase()),
-          kvRow("Confidence", `${(c.classification.confidence * 100).toFixed(1)}%`),
-          kvRow("Delta E", String(c.classification.deltaE)),
+          kvRow("Outcome", `${c.classification.outcome} (PRESUMPTIVE — NOT CONFIRMATORY)`),
+          kvRow(
+            "Confidence",
+            c.classification.confidence !== null
+              ? `${(c.classification.confidence * 100).toFixed(1)}%`
+              : "Not recorded"
+          ),
+          kvRow(
+            "Delta E",
+            c.classification.deltaE !== null
+              ? String(c.classification.deltaE)
+              : "Not measured"
+          ),
           kvRow("Quality Flags", c.classification.qualityFlags.join(", ") || "None"),
         ],
       }),
       heading("4. Location"),
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: NO_BORDER,
-        rows: [
-          kvRow("Latitude", c.gps.lat.toFixed(6)),
-          kvRow("Longitude", c.gps.lon.toFixed(6)),
-          kvRow("Accuracy", `±${c.gps.accuracy} m`),
-          kvRow("GPS Mocked", c.gps.mocked ? "YES — FLAGGED" : "No"),
-        ],
-      }),
+      c.gps.available
+        ? new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: NO_BORDER,
+            rows: [
+              kvRow("Latitude", (c.gps.lat as number).toFixed(6)),
+              kvRow("Longitude", (c.gps.lon as number).toFixed(6)),
+              kvRow(
+                "Accuracy",
+                c.gps.accuracy !== null ? `±${c.gps.accuracy} m` : "Not recorded"
+              ),
+              kvRow("Provenance", c.gps.source ?? "Not recorded"),
+              kvRow("GPS Mocked", c.gps.mocked ? "YES — FLAGGED" : "No"),
+            ],
+          })
+        : new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: NO_BORDER,
+            rows: [
+              kvRow(
+                "Capture position",
+                "NOT AVAILABLE — no GPS fix recorded at capture"
+              ),
+              kvRow("GPS Mocked", c.gps.mocked ? "YES — FLAGGED" : "No"),
+            ],
+          }),
       heading("5. Integrity / Provenance"),
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
@@ -124,9 +150,23 @@ export function buildCaseDoc(cases: EnrichedCase[], generatedBy: string): Docume
         rows: [
           kvRow("Image Hash (SHA-256)", c.imageHash),
           kvRow("Record Hash (SHA-256)", c.recordHash),
-          kvRow("Signature", c.signature),
+          kvRow("Integrity Seal (deviceAttestation)", c.deviceAttestation ?? "Not recorded"),
+          kvRow("Keystore Security Level", c.deviceSecurityLevel ?? "Not recorded"),
           kvRow("Panchnama Ref", c.panchnamaRef ?? "Not set"),
           kvRow("Case Status", c.caseStatus.replace("_", " ").toUpperCase()),
+        ],
+      }),
+      new Paragraph({ spacing: { before: 240 }, children: [] }),
+      new Paragraph({
+        spacing: { after: 120 },
+        children: [
+          new TextRun({
+            text:
+              "NOTICE: The colourimetric field test result recorded above is a PRESUMPTIVE INDICATOR ONLY. It is not a confirmatory laboratory assay and does not establish the identity of any substance. Confirmatory analysis by an accredited government laboratory is required under Rule 10(2) of the NDPS (Seizure, Storage, Sampling and Disposal) Rules, 2022.",
+            size: 16,
+            bold: true,
+            color: "92400E",
+          }),
         ],
       }),
       new Paragraph({ spacing: { before: 480 }, children: [] }),

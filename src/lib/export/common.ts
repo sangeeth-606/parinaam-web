@@ -50,7 +50,7 @@ export async function casesForExport(
       ok: true,
       session,
       caseId,
-      cases: queryCases({ search: caseId, pageSize: 1 }, session).items,
+      cases: (await queryCases({ search: caseId, pageSize: 1 }, session)).items,
     };
   }
 
@@ -68,7 +68,7 @@ export async function casesForExport(
     page: 1,
     pageSize: EXPORT_CAP,
   };
-  return { ok: true, session, cases: queryCases(q, session).items };
+  return { ok: true, session, cases: (await queryCases(q, session)).items };
 }
 
 export function exportFilename(ext: string, caseId?: string): string {

@@ -10,5 +10,5 @@ export async function GET() {
   }
   // RBAC: facet lists are scoped too — field officers only see values from
   // their own corpus, so the filter dropdowns can't leak unit-wide data.
-  return NextResponse.json(distinctFacets(session));
+  return NextResponse.json(await distinctFacets(session));
 }

@@ -24,11 +24,25 @@ export interface DailyPoint {
   inconclusive: number;
 }
 
+/**
+ * Trilevel reagent vocabulary → display colour. Keys are the canonical
+ * UPPERCASE values the store emits; the lowercase aliases are retained only
+ * for legacy rows. An unknown outcome must never be coloured as a result, so
+ * lookups fall through to a neutral slate.
+ */
 const OUTCOME_COLORS: Record<string, string> = {
+  CONSISTENT_WITH_REAGENT_POSITIVE: "#dc2626",
+  CONSISTENT_WITH_REAGENT_NEGATIVE: "#059669",
+  INCONCLUSIVE: "#d97706",
+  // Legacy aliases
   positive: "#dc2626",
   negative: "#059669",
   inconclusive: "#d97706",
 };
+
+export function outcomeColor(outcome: string | null | undefined): string {
+  return OUTCOME_COLORS[(outcome ?? "").toUpperCase()] ?? "#64748b";
+}
 
 export function TrendChart({ data }: { data: DailyPoint[] }) {
   return (
@@ -45,9 +59,9 @@ export function TrendChart({ data }: { data: DailyPoint[] }) {
         <YAxis fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
         <Tooltip />
         <Legend wrapperStyle={{ fontSize: 11 }} />
-        <Area type="monotone" dataKey="positive" stackId="1" stroke={OUTCOME_COLORS.positive} fill={OUTCOME_COLORS.positive} fillOpacity={0.55} name="Positive" />
-        <Area type="monotone" dataKey="inconclusive" stackId="1" stroke={OUTCOME_COLORS.inconclusive} fill={OUTCOME_COLORS.inconclusive} fillOpacity={0.55} name="Inconclusive" />
-        <Area type="monotone" dataKey="negative" stackId="1" stroke={OUTCOME_COLORS.negative} fill={OUTCOME_COLORS.negative} fillOpacity={0.55} name="Negative" />
+        <Area type="monotone" dataKey="positive" stackId="1" stroke={OUTCOME_COLORS.CONSISTENT_WITH_REAGENT_POSITIVE} fill={OUTCOME_COLORS.CONSISTENT_WITH_REAGENT_POSITIVE} fillOpacity={0.55} name="Reagent positive" />
+        <Area type="monotone" dataKey="inconclusive" stackId="1" stroke={OUTCOME_COLORS.INCONCLUSIVE} fill={OUTCOME_COLORS.INCONCLUSIVE} fillOpacity={0.55} name="Inconclusive" />
+        <Area type="monotone" dataKey="negative" stackId="1" stroke={OUTCOME_COLORS.CONSISTENT_WITH_REAGENT_NEGATIVE} fill={OUTCOME_COLORS.CONSISTENT_WITH_REAGENT_NEGATIVE} fillOpacity={0.55} name="Reagent negative" />
         <Area type="monotone" dataKey="total" stroke="#0d355e" strokeWidth={2} fill="url(#totalFill)" name="All cases" fillOpacity={0} />
       </AreaChart>
     </ResponsiveContainer>
@@ -60,7 +74,7 @@ export function OutcomePie({ data }: { data: { name: string; value: number }[] }
       <PieChart>
         <Pie data={data} dataKey="value" nameKey="name" innerRadius={55} outerRadius={80} paddingAngle={2}>
           {data.map((entry) => (
-            <Cell key={entry.name} fill={OUTCOME_COLORS[entry.name.toLowerCase()] ?? "#94a3b8"} />
+            <Cell key={entry.name} fill={outcomeColor(entry.name)} />
           ))}
         </Pie>
         <Tooltip />

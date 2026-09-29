@@ -34,18 +34,26 @@ export async function POST(
     return NextResponse.json({ error: "Invalid status." }, { status: 400 });
   }
 
-  const before = getCase(id, session);
+  const before = await getCase(id, session);
   if (!before) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }
 
-  const updated = updateCase(id, {
-    caseStatus: body.caseStatus,
-    panchnamaRef: body.panchnamaRef,
-  });
+  const updated = await updateCase(
+    id,
+    {
+      caseStatus: body.caseStatus,
+      panchnamaRef: body.panchnamaRef,
+    },
+    session.name
+  );
 
   if (body.caseStatus && body.caseStatus !== before.caseStatus) {
-    recordStatusChange(session.name, id, before.caseStatus, body.caseStatus);
+    await recordStatusChange(session.name, id, before.caseStatus, body.caseStatus);
+  }
+
+  if (!updated) {
+    return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }
 
   return NextResponse.json(updated);

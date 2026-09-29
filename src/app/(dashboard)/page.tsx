@@ -19,6 +19,9 @@ import { recentActivity } from "@/lib/store";
 import { can, canManageAccounts, type Role } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 
+import { PresumptiveBanner } from "@/components/presumptive-banner";
+import { LiveFeed } from "@/components/live-feed";
+
 const ACTIVITY_ICONS = {
   login: LogIn,
   status_change: ClipboardList,
@@ -31,23 +34,23 @@ const ACTIVITY_ICONS = {
 export default async function DashboardHome() {
   const session = (await getSession())!;
   // RBAC: stats are scope-derived — field officers aggregate their own records.
-  const stats = computeStats(session);
+  const stats = await computeStats(session);
   const isAdmin = canManageAccounts(session.role as Role);
   // RBAC: `audit.view` — the activity feed is an audit surface; field
   // officers (and anyone without the capability) don't see it.
   const canViewActivity = can(session.role as Role, "audit.view");
-  const activity = canViewActivity ? recentActivity(8) : [];
+  const activity = canViewActivity ? await recentActivity(8) : [];
   const canSeeAnalytics = can(session.role as Role, "records.view_unit");
 
   const cards = [
     { label: "Total cases", value: String(stats.total), sub: "all time" },
-    { label: "Under review", value: String(stats.byStatus.under_review), sub: "awaiting decision" },
-    { label: "Reviewed", value: String(stats.byStatus.reviewed), sub: "closed by reviewers" },
-    { label: "Escalated", value: String(stats.byStatus.escalated), sub: "need attention" },
+    { label: "Under review", value: String(stats.byStatus.under_review ?? 0), sub: "awaiting decision" },
+    { label: "Reviewed", value: String(stats.byStatus.reviewed ?? 0), sub: "closed by reviewers" },
+    { label: "Escalated", value: String(stats.byStatus.escalated ?? 0), sub: "need attention" },
     {
       label: "Positive tests",
-      value: String(stats.byOutcome.positive),
-      sub: `${((stats.byOutcome.positive / stats.total) * 100).toFixed(1)}% of all`,
+      value: String(stats.byOutcome.positive ?? 0),
+      sub: stats.total ? `${(((stats.byOutcome.positive ?? 0) / stats.total) * 100).toFixed(1)}% of all` : "0%",
     },
     {
       label: "Avg confidence",
@@ -64,6 +67,23 @@ export default async function DashboardHome() {
           Welcome back, {session.name}. Here&apos;s the current state of field submissions.
         </p>
       </div>
+
+      <div className="flex justify-end">
+        <LiveFeed initialTotal={stats.total} />
+      </div>
+
+      {stats.isDemoOnly && (
+        <div className="flex items-start gap-2 rounded-lg border border-gold-deep/50 bg-gold/15 p-3 text-xs text-navy-deep">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong>Demonstration data.</strong> Every record in this corpus is
+            seeded sample data, not a real seizure. No figure below should be
+            cited in any proceeding.
+          </span>
+        </div>
+      )}
+
+      <PresumptiveBanner />
 
       {/* Summary numbers */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">

@@ -14,6 +14,8 @@ import { getCase } from "@/lib/store";
 import { can, type Role } from "@/lib/auth";
 import { formatConfidence, formatDateTime } from "@/lib/utils";
 
+import { PresumptiveBanner } from "@/components/presumptive-banner";
+
 function Row({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
     <div className="flex flex-col gap-0.5 border-b border-border/60 py-2 last:border-0">
@@ -34,7 +36,7 @@ export default async function CaseDetailPage({
   const session = (await getSession())!;
   // RBAC: scope-filtered lookup — a field officer opening a foreign record
   // gets the same 404 as a typo'd id (no existence probing).
-  const record = getCase(id, session);
+  const record = await getCase(id, session);
   if (!record) notFound();
 
   const role = session.role as Role;
@@ -76,6 +78,8 @@ export default async function CaseDetailPage({
         </div>
       </div>
 
+      <PresumptiveBanner compact />
+
       {record.gps.mocked && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
           <TriangleAlert className="h-4 w-4" />
@@ -94,13 +98,31 @@ export default async function CaseDetailPage({
               <CardTitle>Field photo</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={record.imageUrl}
-                alt={`Field test photo for ${record.id}`}
-                className="w-full rounded-md border"
-              />
-              <Row label="Image hash (SHA-256)" value={record.imageHash} mono />
+              {record.imageUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={record.imageUrl}
+                    alt={`Field test photo for ${record.id}`}
+                    className="w-full rounded-md border"
+                  />
+                  <Row label="Image hash (SHA-256)" value={record.imageHash} mono />
+                </>
+              ) : (
+                // No blob on file. We say so plainly rather than rendering a
+                // synthetic test strip that could be mistaken for evidence.
+                <div className="rounded-md border border-dashed p-6 text-center text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground">
+                    No evidence image on file
+                  </p>
+                  <p className="mt-1">
+                    This record carries no image hash. The capture either
+                    recorded no photograph or the blob has not yet synced. No
+                    placeholder image is shown, because a synthetic image must
+                    never be presented as seizure evidence.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -111,26 +133,56 @@ export default async function CaseDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <MapWrapper
-                points={[
-                  {
-                    id: record.id,
-                    lat: record.gps.lat,
-                    lon: record.gps.lon,
-                    outcome: record.classification.outcome,
-                    positive: record.classification.outcome === "positive",
-                  },
-                ]}
-                center={[record.gps.lat, record.gps.lon]}
-                zoom={11}
-                height={260}
-              />
-              <div className="grid grid-cols-2 gap-x-4 pt-2">
-                <Row label="Latitude" value={record.gps.lat.toFixed(6)} mono />
-                <Row label="Longitude" value={record.gps.lon.toFixed(6)} mono />
-                <Row label="Accuracy" value={`±${record.gps.accuracy} m`} />
-                <Row label="GPS mocked" value={record.gps.mocked ? "YES" : "No"} />
-              </div>
+              {record.gps.available ? (
+                <>
+                  <MapWrapper
+                    points={[
+                      {
+                        id: record.id,
+                        lat: record.gps.lat as number,
+                        lon: record.gps.lon as number,
+                        outcome: record.classification.outcome,
+                        positive:
+                          record.classification.outcome ===
+                          "CONSISTENT_WITH_REAGENT_POSITIVE",
+                      },
+                    ]}
+                    center={[record.gps.lat as number, record.gps.lon as number]}
+                    zoom={11}
+                    height={260}
+                  />
+                  <div className="grid grid-cols-2 gap-x-4 pt-2">
+                    <Row label="Latitude" value={(record.gps.lat as number).toFixed(6)} mono />
+                    <Row label="Longitude" value={(record.gps.lon as number).toFixed(6)} mono />
+                    <Row
+                      label="Accuracy"
+                      value={
+                        record.gps.accuracy !== null
+                          ? `±${record.gps.accuracy} m`
+                          : "Not recorded"
+                      }
+                    />
+                    <Row
+                      label="Provenance"
+                      value={record.gps.source ?? "Not recorded"}
+                    />
+                    <Row label="GPS mocked" value={record.gps.mocked ? "YES" : "No"} />
+                  </div>
+                </>
+              ) : (
+                // No position was captured. We do not fall back to a city
+                // centroid — an invented coordinate is false evidence.
+                <div className="rounded-md border border-dashed p-6 text-center text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground">
+                    Position unavailable
+                  </p>
+                  <p className="mt-1">
+                    The device recorded no usable GPS fix for this seizure, so no
+                    map position can be shown. No default or approximate
+                    coordinate is substituted.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -146,18 +198,31 @@ export default async function CaseDetailPage({
               <Row
                 label="Confidence"
                 value={
-                  <span className="flex items-center gap-2">
-                    <span className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
-                      <span
-                        className="block h-full rounded-full bg-primary"
-                        style={{ width: `${Math.min(100, record.classification.confidence * 100)}%` }}
-                      />
+                  record.classification.confidence !== null ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
+                        <span
+                          className="block h-full rounded-full bg-primary"
+                          style={{
+                            width: `${Math.min(100, record.classification.confidence * 100)}%`,
+                          }}
+                        />
+                      </span>
+                      {formatConfidence(record.classification.confidence)}
                     </span>
-                    {formatConfidence(record.classification.confidence)}
-                  </span>
+                  ) : (
+                    "Not recorded by device"
+                  )
                 }
               />
-              <Row label="Delta E (color distance)" value={record.classification.deltaE} />
+              <Row
+                label="Delta E (CIE L*a*b* colour distance)"
+                value={
+                  record.classification.deltaE !== null
+                    ? record.classification.deltaE
+                    : "Not measured"
+                }
+              />
               <Row
                 label="Quality flags"
                 value={
@@ -209,12 +274,22 @@ export default async function CaseDetailPage({
               <CardTitle>Integrity / provenance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Row label="Record hash" value={record.recordHash} mono />
-              <Row label="Signature" value={record.signature} mono />
+              <Row label="Record hash (SHA-256)" value={record.recordHash} mono />
+              <Row
+                label="Integrity seal (deviceAttestation)"
+                value={record.deviceAttestation ?? "Not recorded"}
+                mono
+              />
+              <Row
+                label="Keystore security level"
+                value={record.deviceSecurityLevel ?? "Not recorded"}
+              />
               <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
                 Record data is immutable on this dashboard — hashes and the
-                signature are owned by the backend. Every recompute below is
-                recorded in the audit trail.
+                integrity seal are owned by the backend. This is a device
+                attestation, not a digital or PKI signature; no statutory
+                Certifying Authority backs it. Every recompute below is recorded
+                in the audit trail.
               </p>
               {mayRecompute && <IntegrityActions caseId={record.id} />}
             </CardContent>

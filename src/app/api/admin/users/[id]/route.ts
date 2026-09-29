@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { canManageAccounts } from "@/lib/roles";
 import { getSession } from "@/lib/session";
-import { setUserStatus, toPublicUser } from "@/lib/store";
+import { setUserStatus } from "@/lib/store";
 
 export async function PATCH(
   request: Request,
@@ -21,9 +21,9 @@ export async function PATCH(
     status: "active" | "suspended";
   };
 
-  const user = setUserStatus(id, status, session.name);
+  const user = await setUserStatus(id, status, session.name);
   if (!user) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
-  return NextResponse.json(toPublicUser(user));
+  return NextResponse.json(user);
 }

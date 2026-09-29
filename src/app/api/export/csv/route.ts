@@ -40,7 +40,8 @@ export async function GET(request: Request) {
     "gps_mocked",
     "image_hash",
     "record_hash",
-    "signature",
+    "integrity_seal_device_attestation",
+    "device_security_level",
     "case_status",
     "panchnama_ref",
   ];
@@ -71,7 +72,8 @@ export async function GET(request: Request) {
         c.gps.mocked,
         c.imageHash,
         c.recordHash,
-        c.signature,
+        c.deviceAttestation ?? "",
+        c.deviceSecurityLevel ?? "",
         c.caseStatus,
         c.panchnamaRef ?? "",
       ]
@@ -80,7 +82,7 @@ export async function GET(request: Request) {
     );
   }
 
-  recordExport(session.name, `Exported ${cases.length} case(s) as CSV`, caseId);
+  await recordExport(session.name, "csv", caseId);
 
   return new Response(lines.join("\n"), {
     headers: {

@@ -30,8 +30,13 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const users = listUsers();
-  const activity = recentActivity(15);
+  const users = (await listUsers()).map((u) => ({
+    ...u,
+    // The accounts table is the source of truth; only the three lifecycle
+    // states the admin UI can act on are modelled.
+    status: u.status as "active" | "suspended" | "pending",
+  }));
+  const activity = await recentActivity(15);
   const pendingCount = users.filter((u) => u.status === "pending").length;
 
   return (
