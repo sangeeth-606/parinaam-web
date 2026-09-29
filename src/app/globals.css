@@ -101,3 +101,221 @@
     color: #1e3a8a;
   }
 }
+
+/* ==========================================================================
+   Parinaam Institutional Dark Theme (Active ONLY when .dark is on <html>)
+   Deep navy field instrument palette mirroring Parinaam Mobile App
+   ========================================================================== */
+
+html.dark {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --background: #061b2e; /* navy[900] */
+  --foreground: #f2f6fa; /* navy[100] */
+  --card: #0d2945; /* navy[800] */
+  --card-foreground: #f2f6fa;
+  --muted: #08243a; /* navy[850] */
+  --muted-foreground: #a8becf; /* navy[300] */
+  --border: rgba(168, 190, 207, 0.20);
+  --border-strong: rgba(168, 190, 207, 0.34);
+  --input: #08243a;
+  --primary: #f5b83d; /* gold[400] */
+  --primary-foreground: #061b2e;
+}
+
+html.dark body {
+  background: #061b2e;
+  color: #f2f6fa;
+}
+
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  color: #f2f6fa;
+}
+
+html.dark ::selection {
+  background: #1b405d;
+  color: #f5b83d;
+}
+
+/* Chrome surfaces: Header, Sidebar, Footer */
+html.dark header {
+  background-color: #0d2945 !important;
+  border-color: rgba(168, 190, 207, 0.20) !important;
+}
+
+html.dark aside {
+  background-color: #041321 !important;
+  border-color: rgba(168, 190, 207, 0.20) !important;
+  color: #d0dce6 !important;
+}
+
+html.dark aside nav a {
+  color: #a8becf;
+}
+
+html.dark aside nav a:hover {
+  background-color: #0d2945;
+  color: #f2f6fa;
+}
+
+html.dark aside nav a.bg-blue-50 {
+  background-color: #123250 !important;
+  color: #f5b83d !important;
+  border-left-color: #f5b83d !important;
+}
+
+html.dark aside nav a.bg-blue-50 svg {
+  color: #f5b83d !important;
+}
+
+html.dark footer {
+  background-color: #041321 !important;
+  border-color: rgba(168, 190, 207, 0.20) !important;
+  color: #a8becf !important;
+}
+
+/* Structural utility adaptations */
+html.dark .bg-white {
+  background-color: #0d2945;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #08243a;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #123250;
+}
+
+html.dark .text-slate-900 {
+  color: #f2f6fa;
+}
+
+html.dark .text-slate-800 {
+  color: #f2f6fa;
+}
+
+html.dark .text-slate-700 {
+  color: #d0dce6;
+}
+
+html.dark .text-slate-600 {
+  color: #d0dce6;
+}
+
+html.dark .text-slate-500 {
+  color: #a8becf;
+}
+
+html.dark .text-slate-400 {
+  color: #6e8da5;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-100 {
+  border-color: rgba(168, 190, 207, 0.20);
+}
+
+html.dark .border-slate-300 {
+  border-color: rgba(168, 190, 207, 0.34);
+}
+
+html.dark .divide-slate-100 > * + * {
+  border-color: rgba(168, 190, 207, 0.12);
+}
+
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-50\/70:hover,
+html.dark .hover\:bg-slate-50\/80:hover {
+  background-color: #123250;
+}
+
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #123250;
+}
+
+html.dark .hover\:bg-slate-200:hover {
+  background-color: #1b405d;
+}
+
+html.dark .hover\:text-slate-800:hover,
+html.dark .hover\:text-slate-900:hover {
+  color: #ffffff;
+}
+
+html.dark .hover\:border-slate-300:hover {
+  border-color: rgba(168, 190, 207, 0.45);
+}
+
+/* Form controls */
+html.dark input,
+html.dark select {
+  background-color: #08243a !important;
+  color: #f2f6fa !important;
+  border-color: rgba(168, 190, 207, 0.25) !important;
+}
+
+html.dark input::placeholder {
+  color: #6e8da5;
+}
+
+/* Outline Buttons */
+html.dark button.border-slate-200 {
+  background-color: #0d2945;
+  border-color: rgba(168, 190, 207, 0.25);
+  color: #d0dce6;
+}
+
+html.dark button.border-slate-200:hover {
+  background-color: #123250;
+  color: #f2f6fa;
+  border-color: rgba(168, 190, 207, 0.40);
+}
+
+/* Evidentiary Badges & Presumptive Alerts */
+html.dark .bg-emerald-50 {
+  background-color: rgba(20, 83, 77, 0.42);
+  color: #a7f3d0;
+  border-color: #3dd6a0;
+}
+
+html.dark .bg-emerald-50 svg {
+  color: #5ee0ae;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/80 {
+  background-color: rgba(111, 75, 16, 0.42);
+  color: #ffe2a1;
+  border-color: #f5b83d;
+}
+
+html.dark .bg-amber-50 svg {
+  color: #f5b83d;
+}
+
+html.dark .bg-red-50 {
+  background-color: rgba(111, 36, 51, 0.46);
+  color: #ffc1c8;
+  border-color: #f28b9a;
+}
+
+html.dark .bg-red-50 svg {
+  color: #ff8b9b;
+}
+
+html.dark .bg-blue-50,
+html.dark .bg-blue-50\/50,
+html.dark .bg-blue-50\/60 {
+  background-color: rgba(245, 184, 61, 0.14);
+  color: #f5b83d;
+  border-color: rgba(245, 184, 61, 0.35);
+}

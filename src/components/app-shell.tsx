@@ -14,6 +14,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ParinaamLogo } from "@/components/ui/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   ROLE_LABELS,
   type Capability,
@@ -160,6 +161,9 @@ export function Topbar({ user }: { user: SessionUser }) {
             <Wifi className="h-3 w-3 text-emerald-700" />
             <span>ONLINE · CENTRAL LEDGER</span>
           </div>
+
+          {/* Theme Toggle (Light / Dark) */}
+          <ThemeToggle />
 
           {/* User Profile */}
           <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
