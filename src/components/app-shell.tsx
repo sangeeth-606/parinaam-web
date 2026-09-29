@@ -9,24 +9,23 @@ import {
   LogOut,
   ShieldCheck,
   Users,
+  Wifi,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ParinaamLogo } from "@/components/ui/logo";
 import {
   ROLE_LABELS,
-  recordScope,
   type Capability,
   can,
   type SessionUser,
 } from "@/lib/roles";
 
-// Sidebar entries are gated by CAPABILITY, not role lists, so the nav
-// automatically tracks the RBAC matrix in lib/roles.ts.
 const NAV: {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
-  capability: Capability | null; // null = every authenticated session
+  capability: Capability | null;
 }[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, capability: null },
   { href: "/cases", label: "Case Log", icon: ClipboardList, capability: "records.view_own" },
@@ -45,21 +44,23 @@ export function TricolorStrip({ className = "" }: { className?: string }) {
   );
 }
 
-/** Government-style footer matching NCB's .footer-dark (flat #0d355e, faint top hairline). */
+/** Official Government of India & NCB compliance footer. */
 export function Footer() {
-  // NCB .footer-dark: background:#0d355e; border-top:1px solid #ffffff0d
   return (
-    <footer className="border-t border-white/5 bg-navy px-6 py-3 text-[11px] text-white/60">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span>
-          © 2026 Parinaam — NDPS Field Test Dashboard · Narcotics Control
-          Bureau, Ministry of Home Affairs, Government of India
-        </span>
-        <span className="flex gap-4">
-          <span className="transition-colors hover:text-gold">Terms of use</span>
-          <span className="transition-colors hover:text-gold">Privacy policy</span>
-          <span className="transition-colors hover:text-gold">Help</span>
-        </span>
+    <footer className="border-t border-slate-200 bg-white px-6 py-3.5 text-[11px] text-slate-500">
+      <div className="flex flex-wrap items-center justify-between gap-3 max-w-7xl mx-auto">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+          <span>
+            © 2026 Parinaam — NDPS Field Test Review Portal · Narcotics Control
+            Bureau, Ministry of Home Affairs, Government of India
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-slate-500 font-medium">
+          <span className="text-slate-400">BSA §63 / NDPS Rule 10(2)</span>
+          <span className="hover:text-blue-600 cursor-pointer transition-colors">Privacy Policy</span>
+          <span className="hover:text-blue-600 cursor-pointer transition-colors">Audit Standards</span>
+        </div>
       </div>
     </footer>
   );
@@ -71,13 +72,11 @@ export function Sidebar({ user }: { user: SessionUser }) {
     (item) => !item.capability || can(user.role, item.capability)
   );
 
-  // NCB .ncb-mobile-sidebar recipe: linear-gradient(#0d355e 0%, #072540 100%) —
-  // starts at the exact header blue so there is no seam at the top.
   return (
-    <aside className="flex w-60 shrink-0 flex-col bg-gradient-to-b from-navy to-navy-deep text-white">
-      <div className="border-b border-white/10 px-5 py-4">
-        <div className="text-[10px] uppercase tracking-widest text-gold">
-          Navigation
+    <aside className="flex w-64 shrink-0 flex-col border-r border-slate-200/80 bg-white text-slate-700">
+      <div className="border-b border-slate-100 px-5 py-4">
+        <div className="text-[10.5px] uppercase tracking-wider font-bold text-slate-400">
+          Navigation Menu
         </div>
       </div>
       <nav className="flex-1 space-y-1 p-3">
@@ -88,20 +87,28 @@ export function Sidebar({ user }: { user: SessionUser }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all ${
                 active
-                  ? "bg-gold text-navy-deep shadow-sm"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
+                  ? "bg-blue-50 text-blue-700 border-l-4 border-blue-600 shadow-2xs pl-2.5"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
-              <item.icon className="h-4 w-4" />
-              {item.label}
+              <item.icon className={`h-4.5 w-4.5 ${active ? "text-blue-600" : "text-slate-400"}`} />
+              <span>{item.label}</span>
             </Link>
           );
         })}
       </nav>
-      <div className="border-t border-white/10 p-3 text-[11px] text-white/50">
-        SIMS sync: <span className="font-medium text-gold">placeholder ready</span>
+
+      {/* Institutional Boundary Callout */}
+      <div className="border-t border-slate-100 p-4">
+        <div className="rounded-lg bg-slate-50 border border-slate-200/80 p-3 text-[11px] leading-relaxed text-slate-500">
+          <div className="font-semibold text-slate-700 uppercase tracking-wider text-[10px] flex items-center gap-1.5 mb-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Direct Supabase Ledger
+          </div>
+          Self-hosted environment. Invariant rule 8: zero network writes to SIMS, NIDAAN, NCORD or CCTNS.
+        </div>
       </div>
     </aside>
   );
@@ -123,49 +130,84 @@ export function Topbar({ user }: { user: SessionUser }) {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-white/10 bg-navy px-6 py-3 text-white">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-gold/50 bg-white/5">
-          <ShieldCheck className="h-6 w-6 text-gold" />
-        </div>
-        <div>
-          <div className="text-base font-bold leading-tight tracking-wide">
-            PARINAAM
+    <header className="flex flex-col border-b border-slate-200 bg-white">
+      <TricolorStrip />
+      <div className="flex items-center justify-between px-6 py-2.5">
+        <div className="flex items-center gap-3.5">
+          <ParinaamLogo size={38} />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-bold leading-tight tracking-tight text-slate-900">
+                PARINAAM
+              </span>
+              <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.2 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                Portal
+              </span>
+            </div>
+            <div className="text-[10px] uppercase tracking-wider font-medium text-slate-500">
+              Narcotics Control Bureau · Ministry of Home Affairs, Govt. of India
+            </div>
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-gold">
-            Narcotics Control Bureau · Ministry of Home Affairs, Govt. of India
+        </div>
+
+        <div className="flex items-center gap-3.5">
+          {/* Real-time Status Badge */}
+          <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <Wifi className="h-3 w-3 text-emerald-700" />
+            <span>ONLINE · CENTRAL LEDGER</span>
+          </div>
+
+          {/* User Profile */}
+          <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-2xs">
+              {initials}
+            </div>
+            <div className="hidden md:block text-left">
+              <div className="text-xs font-semibold text-slate-900 leading-tight">
+                {user.name}
+              </div>
+              <div className="text-[10.5px] text-slate-500">
+                {ROLE_LABELS[user.role] ?? user.role}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="text-slate-500 hover:text-red-700 hover:bg-red-50 text-xs gap-1.5 px-2.5"
+              title="Sign out of portal"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
           </div>
         </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="hidden text-right leading-tight sm:block">
-          <div className="text-sm font-medium">{user.name}</div>
-          <div className="text-xs text-white/60">{user.department}</div>
-        </div>
-        <span className="rounded bg-white/10 px-2 py-1 text-[11px] font-medium text-gold">
-          {ROLE_LABELS[user.role]}
-        </span>
-        {recordScope(user.role) === "own" && (
-          <span
-            className="rounded border border-gold/50 bg-gold/15 px-2 py-1 text-[11px] font-medium text-gold"
-            title="RBAC scope: you can only see and export records you operate."
-          >
-            Own records only
-          </span>
-        )}
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold text-xs font-semibold text-navy-deep">
-          {initials}
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={logout}
-          title="Sign out"
-          className="text-white hover:bg-white/10 hover:text-white"
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
       </div>
     </header>
+  );
+}
+
+export function AppShell({
+  user,
+  children,
+}: {
+  user: SessionUser;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <Topbar user={user} />
+      <div className="flex flex-1">
+        <Sidebar user={user} />
+        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full">
+          {children}
+        </main>
+      </div>
+      <Footer />
+    </div>
   );
 }

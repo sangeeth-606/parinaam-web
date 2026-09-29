@@ -8,11 +8,11 @@ import {
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Search, Filter, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
-import { OutcomeBadge, StatusBadge } from "@/components/ui/badge";
+import { OutcomeBadge, StatusBadge, IntegrityBadge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -21,8 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Paginated } from "@/lib/types";
-import type { EnrichedCase } from "@/lib/types";
+import type { Paginated, EnrichedCase } from "@/lib/types";
 import { formatConfidence, formatDateTime } from "@/lib/utils";
 
 export interface Facets {
@@ -81,6 +80,7 @@ export function CaseTable({ facets }: { facets: Facets }) {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 25 });
   const [data, setData] = useState<Paginated<EnrichedCase> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(filters.search), 300);
@@ -123,32 +123,48 @@ export function CaseTable({ facets }: { facets: Facets }) {
     () => [
       {
         accessorKey: "id",
-        header: "Case ID",
+        header: "Case Ref",
         cell: (info) => (
-          <span className="font-mono text-xs font-medium">{info.getValue<string>()}</span>
+          <div className="font-mono text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+            {info.getValue<string>()}
+          </div>
         ),
       },
       {
         accessorKey: "createdAt",
-        header: "Recorded",
+        header: "Recorded (IST)",
         cell: (info) => (
-          <span className="whitespace-nowrap text-xs">{formatDateTime(info.getValue<string>())}</span>
+          <span className="whitespace-nowrap font-mono text-xs text-slate-500">
+            {formatDateTime(info.getValue<string>())}
+          </span>
         ),
       },
-      { accessorKey: "district", header: "District" },
-      { accessorKey: "operatorName", header: "Officer" },
-      { accessorKey: "department", header: "Department" },
-      { id: "kitType", accessorFn: (row) => row.kit.kitType, header: "Kit Type" },
       {
-        id: "batchNo",
-        accessorFn: (row) => row.kit.batchNo,
-        header: "Batch",
-        cell: (info) => <span className="font-mono text-xs">{info.getValue<string>()}</span>,
+        accessorKey: "district",
+        header: "District",
+        cell: (info) => (
+          <span className="text-xs font-medium text-slate-700">{info.getValue<string>()}</span>
+        ),
+      },
+      {
+        accessorKey: "operatorName",
+        header: "Officer",
+        cell: (info) => (
+          <span className="text-xs font-medium text-slate-800">{info.getValue<string>()}</span>
+        ),
+      },
+      {
+        id: "kitType",
+        accessorFn: (row) => row.kit.kitType,
+        header: "Kit / Reagent",
+        cell: (info) => (
+          <span className="text-xs font-medium text-slate-600">{info.getValue<string>()}</span>
+        ),
       },
       {
         id: "outcome",
         accessorFn: (row) => row.classification.outcome,
-        header: "Outcome",
+        header: "Assay Outcome",
         cell: (info) => (
           <OutcomeBadge outcome={info.getValue<EnrichedCase["classification"]["outcome"]>()} />
         ),
@@ -156,9 +172,19 @@ export function CaseTable({ facets }: { facets: Facets }) {
       {
         id: "confidence",
         accessorFn: (row) => row.classification.confidence,
-        header: "Confidence",
+        header: "CIE Match",
         cell: (info) => (
-          <span className="tabular-nums text-xs">{formatConfidence(info.getValue<number>())}</span>
+          <span className="tabular-nums font-mono text-xs text-slate-600 font-medium">
+            {formatConfidence(info.getValue<number>())}
+          </span>
+        ),
+      },
+      {
+        id: "integrity",
+        accessorFn: (row) => row.deviceAttestation,
+        header: "Integrity",
+        cell: (info) => (
+          <IntegrityBadge deviceAttestation={info.getValue<string | null>()} />
         ),
       },
       {
@@ -184,113 +210,199 @@ export function CaseTable({ facets }: { facets: Facets }) {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  // Quick Filter Pill definitions matching mobile app
+  const currentOutcome = filters.outcome;
+  const currentStatus = filters.status;
+
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 md:grid-cols-4 xl:grid-cols-6">
-        <div className="col-span-2">
-          <Label htmlFor="search">Search</Label>
-          <Input
-            id="search"
-            placeholder="ID, officer, batch, panchnama…"
-            value={filters.search}
-            onChange={(e) => setFilter("search", e.target.value)}
-            className="mt-1"
-          />
+      {/* Mobile-Style Quick Filter Pills */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setFilter("outcome", "all");
+              setFilter("status", "all");
+            }}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+              currentOutcome === "all" && currentStatus === "all"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            ALL TESTS
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFilter("outcome", "positive");
+              setFilter("status", "all");
+            }}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+              currentOutcome === "positive"
+                ? "bg-emerald-700 text-white shadow-xs"
+                : "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+            }`}
+          >
+            POSITIVE
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFilter("outcome", "inconclusive");
+              setFilter("status", "all");
+            }}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+              currentOutcome === "inconclusive"
+                ? "bg-amber-600 text-white shadow-xs"
+                : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            INCONCLUSIVE
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFilter("status", "under_review");
+              setFilter("outcome", "all");
+            }}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+              currentStatus === "under_review"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            UNDER REVIEW
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFilter("status", "reviewed");
+              setFilter("outcome", "all");
+            }}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+              currentStatus === "reviewed"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            REVIEWED
+          </button>
         </div>
-        <div>
-          <Label>Status</Label>
-          <Select value={filters.status} onChange={(e) => setFilter("status", e.target.value)} className="mt-1">
-            <option value="all">All</option>
-            <option value="reported">Reported</option>
-            <option value="under_review">Under Review</option>
-            <option value="reviewed">Reviewed</option>
-            <option value="escalated">Escalated</option>
-          </Select>
-        </div>
-        <div>
-          <Label>Outcome</Label>
-          <Select value={filters.outcome} onChange={(e) => setFilter("outcome", e.target.value)} className="mt-1">
-            <option value="all">All</option>
-            <option value="positive">Positive</option>
-            <option value="negative">Negative</option>
-            <option value="inconclusive">Inconclusive</option>
-          </Select>
-        </div>
-        <div>
-          <Label>District</Label>
-          <Select value={filters.district} onChange={(e) => setFilter("district", e.target.value)} className="mt-1">
-            <option value="all">All</option>
-            {facets.districts.map((d) => <option key={d} value={d}>{d}</option>)}
-          </Select>
-        </div>
-        <div>
-          <Label>Department</Label>
-          <Select value={filters.department} onChange={(e) => setFilter("department", e.target.value)} className="mt-1">
-            <option value="all">All</option>
-            {facets.departments.map((d) => <option key={d} value={d}>{d}</option>)}
-          </Select>
-        </div>
-        <div>
-          <Label>Officer</Label>
-          <Select value={filters.officer} onChange={(e) => setFilter("officer", e.target.value)} className="mt-1">
-            <option value="all">All</option>
-            {facets.officers.map((o) => <option key={o} value={o}>{o}</option>)}
-          </Select>
-        </div>
-        <div>
-          <Label>Kit Type</Label>
-          <Select value={filters.kitType} onChange={(e) => setFilter("kitType", e.target.value)} className="mt-1">
-            <option value="all">All</option>
-            {facets.kitTypes.map((k) => <option key={k} value={k}>{k}</option>)}
-          </Select>
-        </div>
-        <div>
-          <Label>Batch No</Label>
-          <Input placeholder="BATCH-…" value={filters.batchNo} onChange={(e) => setFilter("batchNo", e.target.value)} className="mt-1" />
-        </div>
-        <div>
-          <Label>From</Label>
-          <Input type="date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} className="mt-1" />
-        </div>
-        <div>
-          <Label>To</Label>
-          <Input type="date" value={filters.to} onChange={(e) => setFilter("to", e.target.value)} className="mt-1" />
-        </div>
-        <div className="col-span-2 flex items-end justify-end">
-          <Button variant="outline" size="sm" onClick={() => { setFilters(EMPTY_FILTERS); setPagination((p) => ({ ...p, pageIndex: 0 })); }}>
-            Reset filters
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="gap-1.5 text-xs font-semibold"
+          >
+            <Filter className="h-3.5 w-3.5" />
+            <span>{showAdvanced ? "Hide Filters" : "More Filters"}</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setFilters(EMPTY_FILTERS);
+              setPagination((p) => ({ ...p, pageIndex: 0 }));
+            }}
+            className="text-xs text-slate-500 hover:text-slate-800 gap-1"
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span>Reset</span>
           </Button>
         </div>
       </div>
 
-      {/* Exports for the filtered set */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {loading ? "Loading…" : `${data?.total ?? 0} case(s) match the current filters`}
+      {/* Search & Advanced Filters Panel */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input
+            id="search"
+            placeholder="Search by Case ID, Officer Name, Batch, Panchnama reference…"
+            value={filters.search}
+            onChange={(e) => setFilter("search", e.target.value)}
+            className="pl-9 h-10"
+          />
+        </div>
+
+        {showAdvanced && (
+          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 md:grid-cols-4 xl:grid-cols-6">
+            <div>
+              <Label>District</Label>
+              <Select value={filters.district} onChange={(e) => setFilter("district", e.target.value)} className="mt-1">
+                <option value="all">All Districts</option>
+                {facets.districts.map((d) => <option key={d} value={d}>{d}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label>Department</Label>
+              <Select value={filters.department} onChange={(e) => setFilter("department", e.target.value)} className="mt-1">
+                <option value="all">All Departments</option>
+                {facets.departments.map((d) => <option key={d} value={d}>{d}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label>Officer</Label>
+              <Select value={filters.officer} onChange={(e) => setFilter("officer", e.target.value)} className="mt-1">
+                <option value="all">All Officers</option>
+                {facets.officers.map((o) => <option key={o} value={o}>{o}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label>Kit Type</Label>
+              <Select value={filters.kitType} onChange={(e) => setFilter("kitType", e.target.value)} className="mt-1">
+                <option value="all">All Kits</option>
+                {facets.kitTypes.map((k) => <option key={k} value={k}>{k}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label>From Date</Label>
+              <Input type="date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <Label>To Date</Label>
+              <Input type="date" value={filters.to} onChange={(e) => setFilter("to", e.target.value)} className="mt-1" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Table Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
+        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          {loading ? "Refreshing ledger…" : `${data?.total ?? 0} ASSAYS MATCHING LEDGER QUERY`}
         </div>
         <div className="flex items-center gap-2">
-          <span className="mr-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <Download className="h-3.5 w-3.5" /> Export filtered set:
+          <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+            <Download className="h-3.5 w-3.5 text-slate-400" /> Export:
           </span>
-          {(["xlsx", "csv", "docx"] as const).map((ext) => (
-            <a key={ext} href={`/api/export/${ext}?${queryString}`}>
-              <Button variant="outline" size="sm">{ext.toUpperCase()}</Button>
-            </a>
-          ))}
+          <a href={`/api/export/csv?${queryString}`}>
+            <Button variant="outline" size="sm" className="h-7 text-xs px-2.5">CSV</Button>
+          </a>
+          <a href={`/api/export/xlsx?${queryString}`}>
+            <Button variant="outline" size="sm" className="h-7 text-xs px-2.5">XLSX</Button>
+          </a>
+          <a href={`/api/export/docx?${queryString}`}>
+            <Button variant="outline" size="sm" className="h-7 text-xs px-2.5">DOCX</Button>
+          </a>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border bg-card">
+      {/* Evidentiary Table with left indicator accents */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="bg-slate-50/90">
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="cursor-pointer select-none"
+                    className="cursor-pointer select-none text-slate-600 font-bold"
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     {String(header.column.columnDef.header ?? "")}
@@ -301,25 +413,36 @@ export function CaseTable({ facets }: { facets: Facets }) {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className="cursor-pointer"
-                onClick={() => router.push(`/cases/${row.original.id}`)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {typeof cell.column.columnDef.cell === "function"
-                      ? cell.column.columnDef.cell(cell.getContext())
-                      : String(cell.getValue() ?? "—")}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
+            {table.getRowModel().rows.map((row) => {
+              const outcome = row.original.classification.outcome;
+              const isPos = outcome === "CONSISTENT_WITH_REAGENT_POSITIVE";
+              const isNeg = outcome === "CONSISTENT_WITH_REAGENT_NEGATIVE";
+              const borderLeftClass = isPos
+                ? "border-l-4 border-l-emerald-600"
+                : isNeg
+                ? "border-l-4 border-l-slate-400"
+                : "border-l-4 border-l-amber-500";
+
+              return (
+                <TableRow
+                  key={row.id}
+                  className={`cursor-pointer transition-colors group hover:bg-slate-50/80 ${borderLeftClass}`}
+                  onClick={() => router.push(`/cases/${row.original.id}`)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {typeof cell.column.columnDef.cell === "function"
+                        ? cell.column.columnDef.cell(cell.getContext())
+                        : String(cell.getValue() ?? "—")}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
             {!loading && table.getRowModel().rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                  No cases match these filters.
+                <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400 text-sm">
+                  No cases found matching these search criteria.
                 </TableCell>
               </TableRow>
             )}
@@ -327,28 +450,35 @@ export function CaseTable({ facets }: { facets: Facets }) {
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">
-          Page {pagination.pageIndex + 1} of{" "}
-          {data ? Math.max(1, Math.ceil(data.total / pagination.pageSize)) : 1}
+      {/* Pagination Bar */}
+      <div className="flex items-center justify-between px-1 text-xs text-slate-500">
+        <div>
+          Showing Page <strong className="font-semibold text-slate-700">{pagination.pageIndex + 1}</strong> of{" "}
+          <strong className="font-semibold text-slate-700">{data ? Math.max(1, Math.ceil(data.total / pagination.pageSize)) : 1}</strong>
         </div>
         <div className="flex items-center gap-2">
           <Select
-            className="w-28"
+            className="w-28 h-8 text-xs"
             value={String(pagination.pageSize)}
             onChange={(e) => setPagination({ pageIndex: 0, pageSize: Number(e.target.value) })}
           >
             {[10, 25, 50, 100].map((n) => (
-              <option key={n} value={n}>{n} / page</option>
+              <option key={n} value={n}>{n} per page</option>
             ))}
           </Select>
-          <Button variant="outline" size="sm" disabled={pagination.pageIndex === 0} onClick={() => table.previousPage()}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={pagination.pageIndex === 0}
+            onClick={() => table.previousPage()}
+          >
             Previous
           </Button>
           <Button
             variant="outline"
             size="sm"
+            className="h-8 text-xs"
             disabled={!data || (pagination.pageIndex + 1) * pagination.pageSize >= data.total}
             onClick={() => table.nextPage()}
           >
@@ -359,7 +489,3 @@ export function CaseTable({ facets }: { facets: Facets }) {
     </div>
   );
 }
-
-
-
-

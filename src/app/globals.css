@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  /* NCB (ncb.gov.in) palette */
+  /* Parinaam Evidentiary Design System */
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -9,22 +9,33 @@
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
   --border: #e2e8f0;
+  --border-strong: #cbd5e1;
   --input: #e2e8f0;
-  --primary: #0d355e; /* NCB masthead navy */
+  --primary: #2563eb; /* Parinaam Brand Royal Blue (royalBlue[600]) */
   --primary-foreground: #ffffff;
-  --accent: #fff0d1; /* soft gold hover tint (blend of #ffcf66 on white) */
-  --accent-foreground: #0b213f;
-  --destructive: #dc3545;
-  --destructive-foreground: #fef2f2;
-  --ring: #0d355e;
-  --radius: 0.375rem;
+  --accent: #eff6ff; /* Soft Royal Blue tint */
+  --accent-foreground: #1d4ed8;
+  --destructive: #dc2626; /* Red reserved exclusively for integrity failure */
+  --destructive-foreground: #ffffff;
+  --ring: #2563eb;
+  --radius: 0.625rem;
 
-  /* Brand primitives (also usable outside Tailwind utilities) */
-  --navy: #0d355e;
-  --navy-deep: #062544;
-  --navy-mid: #122945;
-  --gold: #ffcf66;
-  --gold-deep: #d0a74f;
+  /* Institutional & Evidentiary Primitives */
+  --navy: #0f172a;
+  --navy-deep: #06101d;
+  --navy-mid: #1e293b;
+  --royal-blue: #2563eb;
+  --royal-blue-hover: #1d4ed8;
+  --royal-blue-surface: #eff6ff;
+  --positive: #15803d;
+  --positive-surface: #dcfce7;
+  --positive-border: #86efac;
+  --negative: #475569;
+  --negative-surface: #f1f5f9;
+  --negative-border: #cbd5e1;
+  --warning: #d97706;
+  --warning-surface: #fef3c7;
+  --warning-border: #fde68a;
 }
 
 @theme inline {
@@ -35,6 +46,7 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -46,8 +58,16 @@
   --color-navy: var(--navy);
   --color-navy-deep: var(--navy-deep);
   --color-navy-mid: var(--navy-mid);
-  --color-gold: var(--gold);
-  --color-gold-deep: var(--gold-deep);
+  --color-royal-blue: var(--royal-blue);
+  --color-positive: var(--positive);
+  --color-positive-surface: var(--positive-surface);
+  --color-positive-border: var(--positive-border);
+  --color-negative: var(--negative);
+  --color-negative-surface: var(--negative-surface);
+  --color-negative-border: var(--negative-border);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -63,17 +83,21 @@
   body {
     background: var(--background);
     color: var(--foreground);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   h1,
   h2,
-  h3 {
-    color: var(--navy);
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: #0f172a;
+    letter-spacing: -0.015em;
   }
 
   ::selection {
-    background: var(--gold);
-    color: var(--navy-deep);
+    background: #dbeafe;
+    color: #1e3a8a;
   }
 }
-
